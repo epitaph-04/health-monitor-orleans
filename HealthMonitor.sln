@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.AppHost", "HealthMonitor.AppHost\HealthMonitor.AppHost.csproj", "{F83A7C0E-EDBF-46C5-8620-28543CACA0C1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor", "HealthMonitor\HealthMonitor.csproj", "{A55DC2F0-DB22-4A6E-8AAA-5614C0F3B1F8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Client", "HealthMonitor.Client\HealthMonitor.Client.csproj", "{3A557A82-C7A5-4D49-8E46-A0942136A4A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Model", "HealthMonitor.Model\HealthMonitor.Model.csproj", "{77835CF8-6EDA-4390-BF9E-328977B7F5F4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{254BFF58-51F7-4828-A584-297EFB8C8297}"
+	ProjectSection(SolutionItems) = preProject
+		tailwindcss = tailwindcss
+		tailwind.config.js = tailwind.config.js
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F83A7C0E-EDBF-46C5-8620-28543CACA0C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F83A7C0E-EDBF-46C5-8620-28543CACA0C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F83A7C0E-EDBF-46C5-8620-28543CACA0C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F83A7C0E-EDBF-46C5-8620-28543CACA0C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A55DC2F0-DB22-4A6E-8AAA-5614C0F3B1F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A55DC2F0-DB22-4A6E-8AAA-5614C0F3B1F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A55DC2F0-DB22-4A6E-8AAA-5614C0F3B1F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A55DC2F0-DB22-4A6E-8AAA-5614C0F3B1F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A557A82-C7A5-4D49-8E46-A0942136A4A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A557A82-C7A5-4D49-8E46-A0942136A4A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A557A82-C7A5-4D49-8E46-A0942136A4A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A557A82-C7A5-4D49-8E46-A0942136A4A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77835CF8-6EDA-4390-BF9E-328977B7F5F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77835CF8-6EDA-4390-BF9E-328977B7F5F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77835CF8-6EDA-4390-BF9E-328977B7F5F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77835CF8-6EDA-4390-BF9E-328977B7F5F4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

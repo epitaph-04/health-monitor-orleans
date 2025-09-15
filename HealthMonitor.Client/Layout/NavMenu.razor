@@ -1,0 +1,28 @@
+﻿@inject NavigationManager NavigationManager
+
+<nav class="flex items-center space-x-2 sm:space-x-4">
+    <NavLink href="dashboard">
+        <button id="navDashboard"
+                class="nav-button px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-1 text-slate-300 @(NavigationManager.ToBaseRelativePath(NavigationManager.Uri) == "dashboard" ? "bg-purple-600 text-white" : "bg-slate-700 hover:bg-slate-700 hover:text-white")">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-text-align">
+                <line x1="12" y1="20" x2="12" y2="10"/>
+                <line x1="18" y1="20" x2="18" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="16"/>
+            </svg>
+            <span class="hidden sm:inline">Dashboard</span>
+        </button>
+    </NavLink>
+    <NavLink href="analytics">
+        <button id="navAnalytics"
+                class="nav-button px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-1 text-slate-300 @(NavigationManager.ToBaseRelativePath(NavigationManager.Uri) == "analytics" ? "bg-purple-600 text-white" : "bg-slate-700 hover:bg-slate-700 hover:text-white")">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-text-align">
+                <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                <rect x="2" y="14" width="20" height="6" rx="2"/>
+                <circle cx="8" cy="10" r="2"/>
+                <path d="M12 6v4"/>
+                <path d="M16 8v2"/>
+            </svg>
+            <span class="hidden sm:inline">Analytics</span>
+        </button>
+    </NavLink>
+</nav>
