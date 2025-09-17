@@ -8,7 +8,7 @@ public interface IHealthCheckGrain : IGrainWithStringKey
 {
     public ValueTask Register(int minutes, CancellationToken token);
     public ValueTask<HealthCheckResult> GetLastCheckResult(CancellationToken token);
-    public ValueTask<List<HealthCheckResult>> GetHistoricalCheckResults(CancellationToken token);
+    public ValueTask<List<HealthCheckResult>> GetHistoricalCheckResults(DateTime start, DateTime end, CancellationToken token);
 }
 
 [StorageProvider(ProviderName = "Default")]
@@ -33,9 +33,12 @@ public class HealthCheckGrain(
 
     public ValueTask<HealthCheckResult> GetLastCheckResult(CancellationToken token) 
         => ValueTask.FromResult(healthCheckState.State);
-
-    public ValueTask<List<HealthCheckResult>> GetHistoricalCheckResults(CancellationToken token)
-        => ValueTask.FromResult(historicalHealthChecksState.State);
+    
+    public ValueTask<List<HealthCheckResult>> GetHistoricalCheckResults(DateTime start, DateTime end, CancellationToken token)
+    {
+        var historicalData = historicalHealthChecksState.State;
+        return ValueTask.FromResult(historicalData.Where(h => h.CheckedTimeUtc > start && h.CheckedTimeUtc < end).ToList());
+    }
 
     async Task IRemindable.ReceiveReminder(string reminderName, TickStatus status)
     {

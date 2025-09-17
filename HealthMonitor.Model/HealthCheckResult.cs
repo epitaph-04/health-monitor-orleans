@@ -10,7 +10,7 @@ public record HealthCheckResult
     [Id(1)]
     public TimeSpan ResponseTime { get; set; }
     [Id(2)]
-    public DateTime LastCheckedUtc { get; set; } = DateTime.UtcNow;
+    public DateTime CheckedTimeUtc { get; set; } = DateTime.UtcNow;
     [Id(3)]
     public string Message { get; set; } = null!;
 }

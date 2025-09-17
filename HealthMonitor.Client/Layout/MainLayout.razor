@@ -1,29 +1,29 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="min-h-screen bg-slate-200">
-    <header class="bg-slate-100 shadow-md sticky top-0 z-50">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-500 mr-2 h-7 w-7">
-                        <path d="M20 7h-9"/>
-                        <path d="M14 17H5"/>
-                        <circle cx="17" cy="17" r="3"/>
-                        <circle cx="7" cy="7" r="3"/>
-                    </svg>
-                    <h1 class="text-2xl font-bold text-slate-700">Health Monitor</h1>
-                </div>
-                <NavMenu/>
-            </div>
-        </div>
-    </header>
-    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
-        @Body
-    </main>
-</div>
+<MudThemeProvider IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Fixed="true">
+        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
+        <MudText Typo="Typo.h5" Class="font-weight-bold">Health Monitor</MudText>
+        <MudSpacer />
+        <NavMenu />
+    </MudAppBar>
+    
+    <MudMainContent Class="pt-16 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <MudAlert Severity="Severity.Error" Class="pa-4" Square="true">
+        An unhandled error has occurred.
+        <MudLink Href="" Target="_self">Reload</MudLink>
+        <span class="dismiss">🗙</span>
+    </MudAlert>
 </div>

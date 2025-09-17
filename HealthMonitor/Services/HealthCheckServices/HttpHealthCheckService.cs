@@ -84,7 +84,7 @@ public class HttpHealthCheckService : IHealthCheckService
         }
         finally
         {
-            result.LastCheckedUtc = DateTime.UtcNow;
+            result.CheckedTimeUtc = DateTime.UtcNow;
         }
         return result;
     }

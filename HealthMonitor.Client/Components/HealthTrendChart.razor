@@ -1,0 +1,100 @@
+@using HealthMonitor.Model.Analytics
+
+<MudCard Elevation="2">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@Title</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+        @if (RefreshAction != null) {
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@RefreshAction"/>
+        }
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (DataPoints.Count > 0)
+        {
+            <MudChart ChartType="ChartType.Line" 
+                      ChartSeries="@_chartSeries" 
+                      XAxisLabels="@_xAxisLabels"
+                      ChartOptions="@_chartOptions" 
+                      AxisChartOptions="@_axisChartOptions"
+                      Height="@Height"
+                      Width="@Width"/>    
+        } else {
+            <MudText Color="Color.Secondary">Trend data is not available.</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public string Title { get; set; } = null!;
+    [Parameter] public Func<Task>? RefreshAction { get; set; }
+    [Parameter] public List<HealthDataPoint> DataPoints { get; set; } = [];
+    [Parameter] public string Height { get; set; } = null!;
+    [Parameter] public string Width { get; set; } = null!;
+    [Parameter] public int MaxXAxisPoint { get; set; } = 7;
+    
+    private List<ChartSeries> _chartSeries = [];
+    private string[] _xAxisLabels = [];
+    private readonly ChartOptions _chartOptions = new()
+    {
+        ShowLegend = false,
+        XAxisLines = true,
+        MaxNumYAxisTicks = 11,
+        YAxisTicks = 10,
+        YAxisFormat = "0'%'",
+        LineStrokeWidth = 2
+    };
+    private readonly AxisChartOptions _axisChartOptions = new () { MatchBoundsToSize = true };
+    
+    protected override void OnParametersSet()
+    {
+        if (DataPoints.Any())
+        {
+            SetupChartData();
+        }
+    }
+    
+    private void SetupChartData()
+    {
+        _chartSeries =
+        [
+            new ChartSeries
+            {
+                Name = Title,
+                Data = DataPoints.Select(p => p.HealthScore).ToArray(),
+                LineDisplayType = LineDisplayType.Area,
+                FillOpacity = 50
+            },
+            new ChartSeries
+            {
+                Name = "Scale",
+                Data = [0, 25, 50, 75, 100],
+                Visible = false,
+                FillOpacity = 100,
+                ShowDataMarkers = false,
+            }
+        ];
+        if (DataPoints.Count > 3)
+        {
+            _chartOptions.InterpolationOption = InterpolationOption.NaturalSpline;
+        }
+        
+        var labels = new List<string>();
+        var labelInterval = Math.Max(1, DataPoints.Count / MaxXAxisPoint);
+        for (var i = 0; i < DataPoints.Count; i++)
+        {
+            // Always show the first and last label, and others at the calculated interval.
+            if (i == 0 || i == DataPoints.Count - 1 || i % labelInterval == 0)
+            {
+                labels.Add(DataPoints[i].Timestamp.ToString("MM/dd hh:mm"));
+            }
+            else
+            {
+                labels.Add(string.Empty);
+            }
+        }
+        _xAxisLabels = labels.ToArray();
+    }
+}
