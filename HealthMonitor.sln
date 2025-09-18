@@ -8,13 +8,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Client", "Hea
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Model", "HealthMonitor.Model\HealthMonitor.Model.csproj", "{77835CF8-6EDA-4390-BF9E-328977B7F5F4}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{254BFF58-51F7-4828-A584-297EFB8C8297}"
-	ProjectSection(SolutionItems) = preProject
-		tailwindcss = tailwindcss
-		tailwind.config.js = tailwind.config.js
-		aspirate.json = aspirate.json
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -25,6 +25,7 @@ builder.UseOrleans(siloBuilder =>
             o.RebalancerDueTime = TimeSpan.FromSeconds(30);
             o.SessionCyclePeriod = TimeSpan.FromSeconds(30);
         });
+    siloBuilder.UseDashboard(cfg => cfg.HostSelf = true);
 });
 
 builder.Services.AddHttpClient();
@@ -80,4 +81,5 @@ analyticApi.MapGet("/health-trend", async ([FromServices]IAnalyticsService analy
     var results = await analyticsService.GetSystemHealthTrend(TimeSpan.FromDays(days), token);
     return TypedResults.Ok(results);
 });
+app.Map("/orleans-dashboard", x => x.UseOrleansDashboard());
 app.Run();
