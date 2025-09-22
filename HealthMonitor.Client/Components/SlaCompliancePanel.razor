@@ -1,0 +1,153 @@
+@using HealthMonitor.Client.Service
+@using HealthMonitor.Model.Analytics
+@inject DashboardService DashboardService
+
+<MudGrid>
+    @foreach (var serviceId in SelectedServices)
+    {
+        <MudItem xs="12" lg="4">
+            <MudCard Elevation="2">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@serviceId</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudChip T="string" Size="Size.Small" 
+                                Color="@GetSlaStatusColor(serviceId)" 
+                                Variant="Variant.Filled">
+                            @GetSlaStatusText(serviceId)
+                        </MudChip>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (_slaMetrics.ContainsKey(serviceId))
+                    {
+                        var sla = _slaMetrics[serviceId];
+                        <MudStack Spacing="3">
+                            <!-- Availability SLA -->
+                            <MudStack>
+                                <MudStack Row Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2">Availability SLA</MudText>
+                                    <MudIcon Icon="@(sla.MeetingAvailabilitySla ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" 
+                                            Color="@(sla.MeetingAvailabilitySla ? Color.Success : Color.Error)" />
+                                </MudStack>
+                                <MudStack Row Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.caption">Target: @($"{sla.TargetAvailability:P2}")</MudText>
+                                    <MudText Typo="Typo.caption">Actual: @($"{sla.ActualAvailability:P2}")</MudText>
+                                </MudStack>
+                                <MudProgressLinear Value="@(sla.ActualAvailability * 100)" 
+                                                 Color="@(sla.MeetingAvailabilitySla ? Color.Success : Color.Error)" />
+                            </MudStack>
+
+                            <!-- Response Time SLA -->
+                            <MudStack>
+                                <MudStack Row Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2">Response Time SLA</MudText>
+                                    <MudIcon Icon="@(sla.MeetingResponseTimeSla ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" 
+                                            Color="@(sla.MeetingResponseTimeSla ? Color.Success : Color.Error)" />
+                                </MudStack>
+                                <MudStack Row Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.caption">Target: @($"{sla.TargetResponseTime.TotalMilliseconds:F0}ms")</MudText>
+                                    <MudText Typo="Typo.caption">Actual: @($"{sla.ActualAverageResponseTime.TotalMilliseconds:F0}ms")</MudText>
+                                </MudStack>
+                            </MudStack>
+
+                            <!-- Error Budget -->
+                            <MudCard Variant="Variant.Outlined">
+                                <MudCardContent Class="pa-3">
+                                    <MudStack>
+                                        <MudText Typo="Typo.subtitle2">Error Budget</MudText>
+                                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudText Typo="Typo.body2">Remaining</MudText>
+                                            <MudText Typo="Typo.h6" Color="@GetErrorBudgetColor(sla.ErrorBudgetRemaining)">
+                                                @($"{sla.ErrorBudgetRemaining:P1}")
+                                            </MudText>
+                                        </MudStack>
+                                        <MudProgressLinear Value="@(sla.ErrorBudgetRemaining * 100)" 
+                                                         Color="@GetErrorBudgetColor(sla.ErrorBudgetRemaining)" />
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+
+                            <!-- Estimated Downtime -->
+                            <MudAlert Severity="@GetDowntimeSeverity(sla.EstimatedDowntimeThisMonth)" Dense="true">
+                                <MudText Typo="Typo.body2">
+                                    Estimated monthly downtime: @($"{sla.EstimatedDowntimeThisMonth.TotalMinutes:F1} minutes")
+                                </MudText>
+                            </MudAlert>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack AlignItems="AlignItems.Center" Style="height: 200px;" Justify="Justify.Center">
+                            <MudProgressCircular Indeterminate="true" />
+                            <MudText>Loading SLA data...</MudText>
+                        </MudStack>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Parameter] public List<string> SelectedServices { get; set; } = new();
+
+    private Dictionary<string, SlaMetrics> _slaMetrics = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedServices.Any())
+        {
+            await LoadSlaMetrics();
+        }
+    }
+
+    private async Task LoadSlaMetrics()
+    {
+        _slaMetrics.Clear();
+
+        foreach (var serviceId in SelectedServices)
+        {
+            try
+            {
+                var trendData = await DashboardService.GetServiceTrendAsync(serviceId, 24 * 30); // Last 30 days
+                _slaMetrics[serviceId] = trendData.SlaMetrics;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading SLA metrics for {serviceId}: {ex.Message}");
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private Color GetSlaStatusColor(string serviceId)
+    {
+        if (!_slaMetrics.ContainsKey(serviceId)) return Color.Default;
+        var sla = _slaMetrics[serviceId];
+        return sla.MeetingAvailabilitySla && sla.MeetingResponseTimeSla ? Color.Success : Color.Error;
+    }
+
+    private string GetSlaStatusText(string serviceId)
+    {
+        if (!_slaMetrics.ContainsKey(serviceId)) return "Unknown";
+        var sla = _slaMetrics[serviceId];
+        return sla.MeetingAvailabilitySla && sla.MeetingResponseTimeSla ? "Meeting SLA" : "SLA Breach";
+    }
+
+    private Color GetErrorBudgetColor(double remaining) => remaining switch
+    {
+        >= 0.5 => Color.Success,
+        >= 0.2 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private Severity GetDowntimeSeverity(TimeSpan downtime) => downtime.TotalMinutes switch
+    {
+        <= 5 => Severity.Success,
+        <= 30 => Severity.Warning,
+        _ => Severity.Error
+    };
+}

@@ -31,7 +31,7 @@ public class ServiceRegistry(IOptions<ServiceConfigurations> options, IClusterCl
         var serviceTasks = serviceConfigurations.Select(async serviceConfiguration =>
         {
             var lastCheck = await client.GetGrain<IHealthCheckGrain>(serviceConfiguration.Id)
-                .GetLastCheckResult(token)
+                .GetLastRecord(token)
                 .ConfigureAwait(false);
             return new Service
             {

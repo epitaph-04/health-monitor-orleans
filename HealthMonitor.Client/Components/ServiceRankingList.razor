@@ -1,0 +1,72 @@
+@using HealthMonitor.Client.Model
+@using HealthMonitor.Model.Analytics
+<MudList T="string" Dense>
+    @if (Rankings?.Any() == true)
+    {
+        @foreach (var service in Rankings.OrderBy(r => r.Rank))
+        {
+            <MudListItem>
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Row AlignItems="AlignItems.Center">
+                        <MudAvatar Color="@GetRankColor(service.Rank)" Size="Size.Small">
+                            @service.Rank
+                        </MudAvatar>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: bold;">@service.ServiceId</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @($"{service.HealthScore:F1}% health")
+                            </MudText>
+                        </MudStack>
+                    </MudStack>
+                    
+                    <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                        <MudIcon Icon="@GetTrendIcon(service.Trend)" 
+                                Color="@GetTrendColor(service.Trend)" 
+                                Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @($"{service.Availability:F1}%")
+                        </MudText>
+                    </MudStack>
+                </MudStack>
+            </MudListItem>
+            @if (service != Rankings.Last())
+            {
+                <MudDivider />
+            }
+        }
+    }
+    else
+    {
+        <MudListItem>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">No services selected</MudText>
+        </MudListItem>
+    }
+</MudList>
+
+@code {
+    [Parameter] public List<ServiceRanking> Rankings { get; set; } = new();
+
+    private Color GetRankColor(int rank) => rank switch
+    {
+        1 => Color.Success,
+        2 => Color.Info,
+        3 => Color.Warning,
+        _ => Color.Default
+    };
+
+    private Color GetTrendColor(HealthTrendDirection trend) => trend switch
+    {
+        HealthTrendDirection.Improving => Color.Success,
+        HealthTrendDirection.Declining => Color.Error,
+        HealthTrendDirection.Volatile => Color.Warning,
+        _ => Color.Default
+    };
+
+    private string GetTrendIcon(HealthTrendDirection trend) => trend switch
+    {
+        HealthTrendDirection.Improving => Icons.Material.Filled.TrendingUp,
+        HealthTrendDirection.Declining => Icons.Material.Filled.TrendingDown,
+        HealthTrendDirection.Volatile => Icons.Material.Filled.SwapVert,
+        _ => Icons.Material.Filled.TrendingFlat
+    };
+}

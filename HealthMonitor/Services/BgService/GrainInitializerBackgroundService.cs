@@ -2,7 +2,7 @@ using HealthMonitor.Grains;
 using HealthMonitor.Model;
 using Microsoft.Extensions.Options;
 
-namespace HealthMonitor;
+namespace HealthMonitor.Services.BgService;
 
 public class GrainInitializerBackgroundService(IOptions<ServiceConfigurations> options, IClusterClient client)
     : BackgroundService

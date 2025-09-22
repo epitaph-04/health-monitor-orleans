@@ -18,9 +18,9 @@ public class HttpHealthCheckService : IHealthCheckService
     
     public ServiceConfiguration ServiceConfiguration { get; }
 
-    public async ValueTask<HealthCheckResult> CheckHealthAsync()
+    public async ValueTask<HealthCheckRecord> CheckHealthAsync()
     {
-        var result = new HealthCheckResult();
+        var result = new HealthCheckRecord();
         var stopwatch = new Stopwatch();
 
         try
@@ -48,20 +48,19 @@ public class HttpHealthCheckService : IHealthCheckService
             stopwatch.Stop();
 
             result.ResponseTime = stopwatch.Elapsed;
-            result.Message = "Ok";
             result.Status = response.StatusCode == (System.Net.HttpStatusCode)ServiceConfiguration.ExpectedResponseCode
                 ? Status.Healthy
                 : Status.Critical;
             if (result.Status == Status.Critical)
             {
-                result.Message = $"Unexpected status code: {response.StatusCode}. Response: {await response.Content.ReadAsStringAsync()}";
+                result.ErrorMessage = $"Unexpected status code: {response.StatusCode}. Response: {await response.Content.ReadAsStringAsync()}";
             }
         }
         catch (TaskCanceledException ex)
         {
             stopwatch.Stop();
             result.Status = Status.Critical;
-            result.Message = $"Request timed out after {ServiceConfiguration.TimeoutSeconds} seconds. {ex.Message}";
+            result.ErrorMessage = $"Request timed out after {ServiceConfiguration.TimeoutSeconds} seconds. {ex.Message}";
             result.ResponseTime = stopwatch.Elapsed;
             _logger.LogError("Request timed out, {error}", ex);
         }
@@ -69,7 +68,7 @@ public class HttpHealthCheckService : IHealthCheckService
         {
             stopwatch.Stop();
             result.Status = Status.Critical;
-            result.Message = $"HTTP request failed: {ex.Message}";
+            result.ErrorMessage = $"HTTP request failed: {ex.Message}";
             if(stopwatch.IsRunning) stopwatch.Stop();
             result.ResponseTime = stopwatch.Elapsed;
             _logger.LogError("HTTP request failed, {error}", ex);
@@ -78,13 +77,13 @@ public class HttpHealthCheckService : IHealthCheckService
         {
             if(stopwatch.IsRunning) stopwatch.Stop();
             result.Status = Status.Critical;
-            result.Message = $"An unexpected error occurred: {ex.Message}";
+            result.ErrorMessage = $"An unexpected error occurred: {ex.Message}";
             result.ResponseTime = stopwatch.Elapsed;
             _logger.LogError("An unexpected error occurred, {error}", ex);
         }
         finally
         {
-            result.CheckedTimeUtc = DateTime.UtcNow;
+            result.Timestamp = DateTime.UtcNow;
         }
         return result;
     }

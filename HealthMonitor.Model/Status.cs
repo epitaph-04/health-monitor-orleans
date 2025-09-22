@@ -5,12 +5,25 @@ namespace HealthMonitor.Model;
 [GenerateSerializer]
 public enum Status
 {
-    [Id(0)]
     Unknown,
-    [Id(1)]
     Healthy,
-    [Id(2)]
     Degraded,
-    [Id(3)]
     Critical
+}
+
+public static class StatusExtensions
+{
+    public static bool IsHealthy(this Status status) =>
+        status switch
+        {
+            Status.Healthy => true,
+            _ => false
+        };
+    public static bool IsCritical(this Status status) =>
+        status switch
+        {
+            Status.Critical => true,
+            Status.Degraded => true,
+            _ => false
+        };
 }

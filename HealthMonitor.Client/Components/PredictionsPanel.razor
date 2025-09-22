@@ -1,0 +1,295 @@
+@using HealthMonitor.Client.Service
+@inject DashboardService DashboardService
+
+<MudGrid>
+    <!-- Prediction Chart -->
+    <MudItem xs="12" lg="8">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Health Predictions - Next 24 Hours</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                        AI Powered
+                    </MudChip>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent Style="height: 400px;">
+                <PredictionChart Data="@_predictionChartData" />
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Prediction Insights -->
+    <MudItem xs="12" lg="4">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Prediction Insights</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent Style="height: 400px; overflow-y: auto;">
+                <MudStack Spacing="3">
+                    @foreach (var insight in _predictionInsights)
+                    {
+                        <MudCard Variant="Variant.Outlined" Elevation="0">
+                            <MudCardContent Class="pa-3">
+                                <MudStack>
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.subtitle2">@insight.ServiceId</MudText>
+                                        <MudChip T="string" Size="Size.Small" 
+                                                Color="@GetConfidenceColor(insight.Confidence)">
+                                            @($"{insight.Confidence:P0}")
+                                        </MudChip>
+                                    </MudStack>
+                                    <MudText Typo="Typo.body2">@insight.Prediction</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @insight.Reasoning
+                                    </MudText>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Risk Assessment -->
+    <MudItem xs="12">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Risk Assessment Matrix</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTable Items="@_riskAssessments" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Service</MudTh>
+                        <MudTh>Risk Level</MudTh>
+                        <MudTh>Probability</MudTh>
+                        <MudTh>Impact</MudTh>
+                        <MudTh>Recommended Action</MudTh>
+                        <MudTh>Timeline</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Service">@context.ServiceId</MudTd>
+                        <MudTd DataLabel="Risk Level">
+                            <MudChip T="string" Color="@GetRiskColor(context.RiskLevel)" Size="Size.Small">
+                                @context.RiskLevel
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Probability">@($"{context.Probability:P0}")</MudTd>
+                        <MudTd DataLabel="Impact">@context.Impact</MudTd>
+                        <MudTd DataLabel="Recommended Action">@context.RecommendedAction</MudTd>
+                        <MudTd DataLabel="Timeline">@context.Timeline</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public List<string> SelectedServices { get; set; } = new();
+
+    private List<PredictionChartData> _predictionChartData = new();
+    private List<PredictionInsight> _predictionInsights = new();
+    private List<RiskAssessment> _riskAssessments = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadPredictions();
+        GenerateInsights();
+        CalculateRiskAssessments();
+    }
+
+    private async Task LoadPredictions()
+    {
+        _predictionChartData.Clear();
+
+        foreach (var serviceId in SelectedServices)
+        {
+            try
+            {
+                var trendData = await DashboardService.GetServiceTrendAsync(serviceId, 168); // Last 7 days
+                
+                foreach (var prediction in trendData.Predictions)
+                {
+                    _predictionChartData.Add(new PredictionChartData
+                    {
+                        ServiceId = serviceId,
+                        Time = prediction.PredictionTime,
+                        PredictedHealth = prediction.PredictedHealthScore,
+                        Confidence = prediction.Confidence
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading predictions for {serviceId}: {ex.Message}");
+            }
+        }
+    }
+
+    private void GenerateInsights()
+    {
+        _predictionInsights.Clear();
+
+        var serviceGroups = _predictionChartData.GroupBy(p => p.ServiceId);
+        
+        foreach (var group in serviceGroups)
+        {
+            var predictions = group.OrderBy(p => p.Time).ToList();
+            if (!predictions.Any()) continue;
+
+            var trend = CalculateTrend(predictions.Select(p => p.PredictedHealth).ToList());
+            var avgConfidence = predictions.Average(p => p.Confidence);
+            
+            var insight = new PredictionInsight
+            {
+                ServiceId = group.Key,
+                Confidence = avgConfidence
+            };
+
+            if (trend < -5)
+            {
+                insight.Prediction = "Health expected to decline significantly";
+                insight.Reasoning = "Based on recent performance patterns and anomaly frequency";
+            }
+            else if (trend > 5)
+            {
+                insight.Prediction = "Health expected to improve";
+                insight.Reasoning = "Positive trend observed in recent metrics";
+            }
+            else
+            {
+                insight.Prediction = "Health expected to remain stable";
+                insight.Reasoning = "No significant trend changes detected";
+            }
+
+            _predictionInsights.Add(insight);
+        }
+    }
+
+    private void CalculateRiskAssessments()
+    {
+        _riskAssessments.Clear();
+
+        foreach (var serviceId in SelectedServices)
+        {
+            var servicePredictions = _predictionChartData.Where(p => p.ServiceId == serviceId).ToList();
+            if (!servicePredictions.Any()) continue;
+
+            var lowestPredictedHealth = servicePredictions.Min(p => p.PredictedHealth);
+            var avgConfidence = servicePredictions.Average(p => p.Confidence);
+            
+            var risk = new RiskAssessment
+            {
+                ServiceId = serviceId,
+                Probability = 1 - (lowestPredictedHealth / 100.0),
+                Impact = DetermineImpact(serviceId)
+            };
+
+            risk.RiskLevel = CalculateRiskLevel(risk.Probability, GetImpactScore(risk.Impact));
+            risk.RecommendedAction = GetRecommendedAction(risk.RiskLevel);
+            risk.Timeline = GetTimeline(risk.RiskLevel);
+
+            _riskAssessments.Add(risk);
+        }
+    }
+
+    private double CalculateTrend(List<double> values)
+    {
+        if (values.Count < 2) return 0;
+        return (values.Last() - values.First()) / values.Count;
+    }
+
+    private string DetermineImpact(string serviceId) => serviceId switch
+    {
+        "api-service" => "High",
+        "database" => "Critical",
+        "auth-service" => "High",
+        "cache" => "Medium",
+        _ => "Low"
+    };
+
+    private int GetImpactScore(string impact) => impact switch
+    {
+        "Critical" => 4,
+        "High" => 3,
+        "Medium" => 2,
+        _ => 1
+    };
+
+    private string CalculateRiskLevel(double probability, int impactScore)
+    {
+        var riskScore = probability * impactScore;
+        return riskScore switch
+        {
+            >= 3 => "Critical",
+            >= 2 => "High",
+            >= 1 => "Medium",
+            _ => "Low"
+        };
+    }
+
+    private string GetRecommendedAction(string riskLevel) => riskLevel switch
+    {
+        "Critical" => "Immediate intervention required",
+        "High" => "Schedule maintenance window",
+        "Medium" => "Monitor closely, prepare mitigation",
+        _ => "Continue normal monitoring"
+    };
+
+    private string GetTimeline(string riskLevel) => riskLevel switch
+    {
+        "Critical" => "Next 2-4 hours",
+        "High" => "Next 12-24 hours",
+        "Medium" => "Next 2-3 days",
+        _ => "Next week"
+    };
+
+    private Color GetConfidenceColor(double confidence) => confidence switch
+    {
+        >= 0.8 => Color.Success,
+        >= 0.6 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private Color GetRiskColor(string riskLevel) => riskLevel switch
+    {
+        "Critical" => Color.Error,
+        "High" => Color.Warning,
+        "Medium" => Color.Info,
+        _ => Color.Success
+    };
+
+    public class PredictionChartData
+    {
+        public string ServiceId { get; set; } = "";
+        public DateTime Time { get; set; }
+        public double PredictedHealth { get; set; }
+        public double Confidence { get; set; }
+    }
+
+    public class PredictionInsight
+    {
+        public string ServiceId { get; set; } = "";
+        public string Prediction { get; set; } = "";
+        public string Reasoning { get; set; } = "";
+        public double Confidence { get; set; }
+    }
+
+    public class RiskAssessment
+    {
+        public string ServiceId { get; set; } = "";
+        public string RiskLevel { get; set; } = "";
+        public double Probability { get; set; }
+        public string Impact { get; set; } = "";
+        public string RecommendedAction { get; set; } = "";
+        public string Timeline { get; set; } = "";
+    }
+}

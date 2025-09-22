@@ -1,0 +1,243 @@
+@using HealthMonitor.Client.Service
+@using HealthMonitor.Model.Analytics
+@inject DashboardService DashboardService
+
+<MudGrid>
+    <!-- Anomaly Timeline -->
+    <MudItem xs="12">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Anomaly Timeline</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTimeline TimelineOrientation="TimelineOrientation.Vertical" 
+                           TimelinePosition="TimelinePosition.Left"
+                           TimelineAlign="TimelineAlign.Start">
+                    @foreach (var anomaly in _allAnomalies.OrderByDescending(a => a.StartTime).Take(10))
+                    {
+                        <MudTimelineItem Color="@GetAnomalyTimelineColor(anomaly.Severity)" 
+                                       Size="Size.Small"
+                                       Variant="Variant.Filled">
+                            <ItemContent>
+                                <MudCard Elevation="1" Class="mb-2">
+                                    <MudCardContent Class="pa-3">
+                                        <MudStack>
+                                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                <MudText Typo="Typo.subtitle2" Style="font-weight: bold;">
+                                                    @anomaly.Type
+                                                </MudText>
+                                                <MudChip T="string" Size="Size.Small" 
+                                                        Color="@GetAnomalyColor(anomaly.Severity)">
+                                                    @GetSeverityText(anomaly.Severity)
+                                                </MudChip>
+                                            </MudStack>
+                                            
+                                            <MudText Typo="Typo.body2">
+                                                @anomaly.Description
+                                            </MudText>
+                                            
+                                            <MudStack Row AlignItems="AlignItems.Center">
+                                                <MudIcon Icon="Icons.Material.Filled.AccessTime" Size="Size.Small" />
+                                                <MudText Typo="Typo.caption">
+                                                    @($"{anomaly.StartTime:MMM dd, HH:mm} - {anomaly.EndTime:HH:mm}")
+                                                </MudText>
+                                                <MudSpacer />
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    Duration: @((anomaly.EndTime - anomaly.StartTime).TotalMinutes.ToString("F0"))m
+                                                </MudText>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            </ItemContent>
+                        </MudTimelineItem>
+                    }
+                </MudTimeline>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Anomaly Statistics -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Anomaly Statistics</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudStack Spacing="3">
+                    @foreach (var group in _anomalyStats)
+                    {
+                        <MudStack>
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.body1">@group.Key</MudText>
+                                <MudChip T="string" Size="Size.Small">@group.Value</MudChip>
+                            </MudStack>
+                            <MudProgressLinear Value="@GetAnomalyPercentage(group.Value)" 
+                                             Color="@GetAnomalyTypeColor(group.Key)" />
+                        </MudStack>
+                    }
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Anomaly Patterns -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Pattern Analysis</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudStack Spacing="3">
+                    @foreach (var pattern in _detectedPatterns)
+                    {
+                        <MudAlert Severity="@GetPatternSeverity(pattern.Confidence)" 
+                                 Variant="Variant.Outlined" 
+                                 Dense="true">
+                            <MudStack>
+                                <MudText Typo="Typo.body2">@pattern.Description</MudText>
+                                <MudText Typo="Typo.caption">
+                                    Confidence: @($"{pattern.Confidence:P0}")
+                                </MudText>
+                            </MudStack>
+                        </MudAlert>
+                    }
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public List<string> SelectedServices { get; set; } = new();
+    [Parameter] public int TimeRangeHours { get; set; } = 24;
+
+    private List<HealthAnomaly> _allAnomalies = new();
+    private Dictionary<string, int> _anomalyStats = new();
+    private List<AnomalyPattern> _detectedPatterns = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAnomalies();
+        CalculateStats();
+        DetectPatterns();
+    }
+
+    private async Task LoadAnomalies()
+    {
+        _allAnomalies.Clear();
+
+        foreach (var serviceId in SelectedServices)
+        {
+            try
+            {
+                var trendData = await DashboardService.GetServiceTrendAsync(serviceId, TimeRangeHours);
+                _allAnomalies.AddRange(trendData.DetectedAnomalies);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading anomalies for {serviceId}: {ex.Message}");
+            }
+        }
+    }
+
+    private void CalculateStats()
+    {
+        _anomalyStats = _allAnomalies
+            .GroupBy(a => a.Type.ToString())
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    private void DetectPatterns()
+    {
+        _detectedPatterns.Clear();
+
+        // Pattern 1: Recurring outages
+        var outages = _allAnomalies.Where(a => a.Type == AnomalyType.LongOutage).ToList();
+        if (outages.Count >= 3)
+        {
+            _detectedPatterns.Add(new AnomalyPattern
+            {
+                Description = $"Recurring outages detected ({outages.Count} instances)",
+                Confidence = Math.Min(outages.Count / 5.0, 1.0)
+            });
+        }
+
+        // Pattern 2: Performance degradation trend
+        var perfIssues = _allAnomalies.Where(a => a.Type == AnomalyType.PerformanceDegradation || 
+                                                 a.Type == AnomalyType.HighResponseTime).ToList();
+        if (perfIssues.Count >= 2)
+        {
+            _detectedPatterns.Add(new AnomalyPattern
+            {
+                Description = "Performance degradation pattern identified",
+                Confidence = 0.7
+            });
+        }
+
+        // Pattern 3: Time-based patterns
+        var hourlyGroups = _allAnomalies.GroupBy(a => a.StartTime.Hour);
+        var peakHour = hourlyGroups.OrderByDescending(g => g.Count()).FirstOrDefault();
+        if (peakHour != null && peakHour.Count() >= 3)
+        {
+            _detectedPatterns.Add(new AnomalyPattern
+            {
+                Description = $"Anomalies frequently occur around {peakHour.Key:00}:00",
+                Confidence = 0.8
+            });
+        }
+    }
+
+    private Color GetAnomalyTimelineColor(double severity) => severity switch
+    {
+        >= 0.8 => Color.Error,
+        >= 0.5 => Color.Warning,
+        _ => Color.Info
+    };
+
+    private Color GetAnomalyColor(double severity) => severity switch
+    {
+        >= 0.8 => Color.Error,
+        >= 0.5 => Color.Warning,
+        _ => Color.Info
+    };
+
+    private string GetSeverityText(double severity) => severity switch
+    {
+        >= 0.8 => "Critical",
+        >= 0.5 => "High",
+        >= 0.3 => "Medium",
+        _ => "Low"
+    };
+
+    private double GetAnomalyPercentage(int count) => 
+        _allAnomalies.Count > 0 ? (double)count / _allAnomalies.Count * 100 : 0;
+
+    private Color GetAnomalyTypeColor(string type) => type switch
+    {
+        "LongOutage" => Color.Error,
+        "HighResponseTime" => Color.Warning,
+        "FrequentFailures" => Color.Error,
+        "PerformanceDegradation" => Color.Warning,
+        _ => Color.Info
+    };
+
+    private Severity GetPatternSeverity(double confidence) => confidence switch
+    {
+        >= 0.8 => Severity.Error,
+        >= 0.6 => Severity.Warning,
+        _ => Severity.Info
+    };
+
+    public class AnomalyPattern
+    {
+        public string Description { get; set; } = "";
+        public double Confidence { get; set; }
+    }
+}

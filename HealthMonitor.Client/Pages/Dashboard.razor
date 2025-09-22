@@ -1,284 +1,559 @@
 @page "/"
-@using HealthMonitor.Client.Components
-@using HealthMonitor.Model
+@using HealthMonitor.Client.Model
+@using HealthMonitor.Client.Service
 @using HealthMonitor.Model.Analytics
-@using Microsoft.AspNetCore.SignalR.Client
-@inject HttpClient Http
-@inject NavigationManager NavigationManager
-@inject ILogger<Dashboard> Logger
-@implements IAsyncDisposable
+@inject DashboardService DashboardService
+@inject ISnackbar Snackbar
+@implements IDisposable
 
-<PageTitle>Health Monitor - Dashboard</PageTitle>
+<PageTitle>Health Monitoring Dashboard</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
-
-    <!-- Header -->
-    <MudPaper Elevation="1" Class="d-flex justify-space-between align-center pa-4 mb-8" Color="Color.Transparent">
-        <MudText Typo="Typo.h4" GutterBottom="true">System Health Dashboard</MudText>
-        <div class="d-flex align-center">
-            <MudChip T="string" Icon="@(_isConnected ? Icons.Material.Filled.Wifi : Icons.Material.Filled.WifiOff)" 
-                     Color="@(_isConnected ? Color.Success : Color.Error)" 
-                     Variant="Variant.Text">
-                @(_isConnected ? "Connected" : "Disconnected")
-            </MudChip>
-            <MudText Typo="Typo.body2" Class="ml-4">Last updated: @_lastUpdated.ToString("HH:mm:ss")</MudText>
-        </div>
-    </MudPaper>
-
-    <!-- Health Overview Cards -->
-    <MudGrid Spacing="4" Class="mb-8">
-        <MudItem xs="12" sm="6" lg="3">
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <div class="d-flex">
-                        <MudAvatar Color="Color.Success" Variant="Variant.Filled">
-                            <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" />
-                        </MudAvatar>
-                        <div class="ml-4">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Healthy Services</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">@_healthyCount</MudText>
-                        </div>
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="6" lg="3">
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <div class="d-flex">
-                        <MudAvatar Style="background-color: var(--mud-palette-warning-light);" Variant="Variant.Filled">
-                            <MudIcon Icon="@Icons.Material.TwoTone.Warning" Color="Color.Warning" />
-                        </MudAvatar>
-                        <div class="ml-4">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Degraded Services</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">@_degradedCount</MudText>
-                        </div>
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="6" lg="3">
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <div class="d-flex">
-                        <MudAvatar Color="Color.Error" Variant="Variant.Filled">
-                            <MudIcon Icon="@Icons.Material.TwoTone.Cancel" />
-                        </MudAvatar>
-                        <div class="ml-4">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Critical Services</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">@_criticalCount</MudText>
-                        </div>
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="6" lg="3">
-            <MudCard Elevation="2">
-                <MudCardContent>
-                    <div class="d-flex">
-                        <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
-                            <MudIcon Icon="@Icons.Material.TwoTone.Speed" />
-                        </MudAvatar>
-                        <div class="ml-4">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Overall Health Score</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">@(_overallHealthScore.ToString("F1"))%</MudText>
-                        </div>
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
-
-    <!-- Main Content Grid -->
-    <MudGrid Spacing="4">
-        <!-- Services List -->
-        <MudItem xs="12" lg="8">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Services Status</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent Class="pa-0">
-                    <MudList T="string" Clickable="true">
-                        @if (_services != null)
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <!-- Dashboard Header -->
+    <MudGrid>
+        <MudItem xs="12">
+            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Row AlignItems="AlignItems.Center">
+                    <MudIcon Icon="Icons.Material.Filled.MonitorHeart" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h4" Color="Color.Primary">Health Monitoring Dashboard</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                        Live
+                    </MudChip>
+                </MudStack>
+                
+                <MudStack Row>
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              StartIcon="Icons.Material.Filled.Refresh"
+                              OnClick="RefreshAllData"
+                              Disabled="@_isRefreshing">
+                        @if (_isRefreshing)
                         {
-                            @foreach (var service in _services.Take(10))
-                            {
-                                <MudListItem T="string" OnClick="@(() => NavigateToService(service.Id))">
-                                    <div class="d-flex justify-space-between w-100 align-center">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.TwoTone.Circle" Color="@GetStatusColor(service.LastCheckStatus.Status)" Class="mr-3" />
-                                            <div>
-                                                <MudText>@service.Name</MudText>
-                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@service.ServiceType</MudText>
-                                            </div>
-                                        </div>
-                                        <div class="text-right">
-                                            <MudText class="text-right" Typo="Typo.body2">@service.LastCheckStatus.ResponseTime.Milliseconds ms</MudText>
-                                            <MudText class="text-right" Typo="Typo.caption" Color="Color.Secondary">@service.LastCheckStatus.CheckedTimeUtc.ToShortTimeString()</MudText>
-                                        </div>
-                                    </div>
-                                </MudListItem>
-                            }
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            <MudText>Refreshing...</MudText>
                         }
-                    </MudList>
-                </MudCardContent>
-                <MudCardActions >
-                    <MudButton Href="/services" Color="Color.Primary" Variant="Variant.Text">View all services</MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
-
-        <!-- Quick Actions & Insights -->
-        <MudItem xs="12" lg="4">
-            <MudStack Spacing="4">
-                <MudCard Elevation="2">
-                    <MudCardHeader><CardHeaderContent><MudText Typo="Typo.h6">Quick Actions</MudText></CardHeaderContent></MudCardHeader>
-                    <MudCardContent>
-                        <MudStack Spacing="2">
-                            <MudButton OnClick="@NavigateToAnalytics" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true">View Analytics</MudButton>
-                            <MudButton OnClick="@NavigateToAlerts" Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">Manage Alerts</MudButton>
-                            <MudButton OnClick="@NavigateToDependencies" Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">View Dependencies</MudButton>
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-
-                <MudCard Elevation="2">
-                    <MudCardHeader><CardHeaderContent><MudText Typo="Typo.h6">Recent Alerts</MudText></CardHeaderContent></MudCardHeader>
-                    <MudCardContent>
-                        <MudText Color="Color.Secondary">No recent alerts</MudText>
-                    </MudCardContent>
-                </MudCard>
-
-                <HealthTrendChart Title="Health Trend"
-                                  RefreshAction="@RefreshHealthTrend"
-                                  Height="150px"
-                                  Width="100%"
-                                  DataPoints="@_dataPoints"
-                                  MaxXAxisPoint="4"
-                />
+                        else
+                        {
+                            <MudText>Refresh All</MudText>
+                        }
+                    </MudButton>
+                    
+                    <MudButton Variant="Variant.Outlined" 
+                              StartIcon="Icons.Material.Filled.Settings"
+                              OnClick="@(() => _settingsDialog = true)">
+                        Settings
+                    </MudButton>
+                </MudStack>
             </MudStack>
         </MudItem>
     </MudGrid>
+
+    <!-- System Overview Cards -->
+    <MudGrid Class="mt-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="4">
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Overall System Health</MudText>
+                            <MudText Typo="Typo.h4" Color="@GetHealthColor(_systemOverview?.OverallSystemHealth ?? 0)">
+                                @($"{_systemOverview?.OverallSystemHealth ?? 0:F1}%")
+                            </MudText>
+                        </MudStack>
+                        <MudIcon Icon="Icons.Material.Filled.HealthAndSafety" 
+                                Size="Size.Large" 
+                                Color="@GetHealthColor(_systemOverview?.OverallSystemHealth ?? 0)" />
+                    </MudStack>
+                    <MudProgressLinear Value="@(_systemOverview?.OverallSystemHealth ?? 0)" 
+                                      Color="@GetHealthColor(_systemOverview?.OverallSystemHealth ?? 0)" 
+                                      Class="mt-2" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="4">
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Healthy Services</MudText>
+                            <MudText Typo="Typo.h4" Color="Color.Success">
+                                @($"{_systemOverview?.HealthyServices ?? 0}/{_systemOverview?.TotalServices ?? 0}")
+                            </MudText>
+                        </MudStack>
+                        <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                    </MudStack>
+                    <MudProgressLinear Value="@GetServiceHealthPercentage()" Color="Color.Success" Class="mt-2" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="4">
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Critical Alerts</MudText>
+                            <MudText Typo="Typo.h4" Color="Color.Error">
+                                @(_systemOverview?.Alerts?.Count(a => a.Severity == AlertSeverity.Critical) ?? 0)
+                            </MudText>
+                        </MudStack>
+                        <MudIcon Icon="Icons.Material.Filled.Warning" Size="Size.Large" Color="Color.Error" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="4">
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Auto-Refresh</MudText>
+                            <MudText Typo="Typo.body1">
+                                @(_autoRefreshEnabled ? $"Every {_refreshInterval}s" : "Disabled")
+                            </MudText>
+                        </MudStack>
+                        <MudSwitch T="bool" @bind-Checked="@_autoRefreshEnabled" 
+                                  Color="Color.Primary"
+                                  UnCheckedColor="Color.Default" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Main Dashboard Content -->
+    <MudGrid Class="mt-4">
+        <!-- Left Panel - Service Selection and Filters -->
+        <MudItem xs="12" md="3">
+            <MudCard Elevation="4" Style="height: 600px;">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Services & Filters</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudIconButton Icon="Icons.Material.Filled.FilterList" Color="Color.Primary" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                    <!-- Time Range Selector -->
+                    <MudStack Class="mb-4">
+                        <MudText Typo="Typo.subtitle2">Time Range</MudText>
+                        <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+                            <MudButton OnClick="@(() => SetTimeRange(1))" 
+                                      Variant="@(_selectedHours == 1 ? Variant.Filled : Variant.Outlined)">
+                                1H
+                            </MudButton>
+                            <MudButton OnClick="@(() => SetTimeRange(24))" 
+                                      Variant="@(_selectedHours == 24 ? Variant.Filled : Variant.Outlined)">
+                                24H
+                            </MudButton>
+                            <MudButton OnClick="@(() => SetTimeRange(168))" 
+                                      Variant="@(_selectedHours == 168 ? Variant.Filled : Variant.Outlined)">
+                                7D
+                            </MudButton>
+                            <MudButton OnClick="@(() => SetTimeRange(720))" 
+                                      Variant="@(_selectedHours == 720 ? Variant.Filled : Variant.Outlined)">
+                                30D
+                            </MudButton>
+                        </MudButtonGroup>
+                    </MudStack>
+
+                    <!-- Service Filter -->
+                    <MudStack>
+                        <MudText Typo="Typo.subtitle2">Services</MudText>
+                        <MudTextField @bind-Value="_serviceSearchText" 
+                                     Placeholder="Search services..." 
+                                     Adornment="Adornment.Start" 
+                                     AdornmentIcon="Icons.Material.Filled.Search"
+                                     Immediate="true" />
+                        
+                        <MudList T="string" Dense>
+                            @foreach (var service in FilteredServices)
+                            {
+                                <MudListItem>
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudCheckBox @bind-Checked="service.IsSelected" 
+                                                    Color="Color.Primary"
+                                                    Dense="true" 
+                                                    Label="@service.ServiceId" />
+                                        <MudChip T="string" Size="Size.Small" 
+                                                Color="@service.StatusColor" 
+                                                Variant="Variant.Filled">
+                                            @GetServiceStatusText(service.ServiceId)
+                                        </MudChip>
+                                    </MudStack>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Center Panel - Main Charts -->
+        <MudItem xs="12" md="6">
+            <MudStack>
+                <!-- Health Trend Chart -->
+                <MudCard Elevation="4" Style="height: 300px;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Health Trends Over Time</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudMenu Icon="Icons.Material.Filled.MoreVert">
+                                <MudMenuItem OnClick="ExportHealthTrendChart">Export Chart</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => _showHealthTrendFullscreen = true)">Fullscreen</MudMenuItem>
+                            </MudMenu>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px);">
+                        <HealthTrendChart Data="@_healthTrendChartData" Height="200" />
+                    </MudCardContent>
+                </MudCard>
+
+                <!-- Response Time Chart -->
+                <MudCard Elevation="4" Style="height: 280px;" Class="mt-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Response Time Trends</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px);">
+                        <ResponseTimeChart Data="@_responseTimeChartData" Height="180" />
+                    </MudCardContent>
+                </MudCard>
+            </MudStack>
+        </MudItem>
+
+        <!-- Right Panel - Alerts and Insights -->
+        <MudItem xs="12" md="3">
+            <MudStack>
+                <!-- System Alerts -->
+                <MudCard Elevation="4" Style="height: 280px;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">System Alerts</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudBadge Content="@(_systemOverview?.Alerts?.Count ?? 0)" 
+                                     Color="Color.Error" Overlap="true" Bordered="true">
+                                <MudIcon Icon="Icons.Material.Filled.Notifications" />
+                            </MudBadge>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                        @if (_systemOverview?.Alerts?.Any() == true)
+                        {
+                            <MudList T="string" Dense>
+                                @foreach (var alert in _systemOverview.Alerts.Take(10))
+                                {
+                                    <MudListItem>
+                                        <MudStack>
+                                            <MudStack Row AlignItems="AlignItems.Center">
+                                                <MudIcon Icon="@GetAlertIcon(alert.Severity)" 
+                                                        Color="@GetAlertColor(alert.Severity)" 
+                                                        Size="Size.Small" />
+                                                <MudText Typo="Typo.body2" Style="font-weight: bold;">
+                                                    @alert.ServiceId
+                                                </MudText>
+                                                <MudSpacer />
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @alert.DetectedAt.ToString("HH:mm")
+                                                </MudText>
+                                            </MudStack>
+                                            <MudText Typo="Typo.body2" Style="margin-left: 24px;">
+                                                @alert.Message
+                                            </MudText>
+                                        </MudStack>
+                                    </MudListItem>
+                                    <MudDivider />
+                                }
+                            </MudList>
+                        }
+                        else
+                        {
+                            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                                <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                                <MudText Typo="Typo.body1" Color="Color.Success">All systems healthy</MudText>
+                            </MudStack>
+                        }
+                    </MudCardContent>
+                </MudCard>
+
+                <!-- Top Services -->
+                <MudCard Elevation="4" Style="height: 300px;" Class="mt-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Service Rankings</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                        <ServiceRankingList Rankings="@_serviceRankings" />
+                    </MudCardContent>
+                </MudCard>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Service Details Tabs -->
+    <MudCard Elevation="4" Class="mt-4">
+        <MudCardContent>
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+                <MudTabPanel Text="Detailed Analysis">
+                    <ServiceDetailedAnalysis SelectedServices="@GetSelectedServices()" TimeRangeHours="@_selectedHours" />
+                </MudTabPanel>
+                
+                <MudTabPanel Text="Anomaly Detection">
+                    <AnomalyDetectionPanel SelectedServices="@GetSelectedServices()" TimeRangeHours="@_selectedHours" />
+                </MudTabPanel>
+                
+                <MudTabPanel Text="SLA Compliance">
+                    <SlaCompliancePanel SelectedServices="@GetSelectedServices()" />
+                </MudTabPanel>
+                
+                <MudTabPanel Text="Predictions">
+                    <PredictionsPanel SelectedServices="@GetSelectedServices()" />
+                </MudTabPanel>
+            </MudTabs>
+        </MudCardContent>
+    </MudCard>
 </MudContainer>
 
-@code {
-    private HubConnection? _hubConnection;
-    private Service[]? _services;
-    private List<HealthDataPoint> _dataPoints = [];
-    private bool _isConnected;
-    private DateTime _lastUpdated = DateTime.Now;
+<!-- Dialogs -->
+<SettingsDialog @bind="@_settingsDialog" 
+                RefreshInterval="@_refreshInterval"
+                OnRefreshIntervalChanged="@UpdateRefreshInterval" />
 
-    private int _healthyCount;
-    private int _degradedCount;
-    private int _criticalCount;
-    private double _overallHealthScore;
+<FullscreenChartDialog @bind="@_showHealthTrendFullscreen" 
+                      Title="Health Trends - Fullscreen"
+                      ChartData="@_healthTrendChartData" />
+
+@code {
+    private SystemHealthOverview? _systemOverview;
+    private List<ServiceFilter> _serviceFilters = new();
+    private readonly List<ChartData> _healthTrendChartData = new();
+    private readonly List<ChartData> _responseTimeChartData = new();
+    private List<ServiceRanking> _serviceRankings = new();
+    
+    private bool _isRefreshing;
+    private bool _autoRefreshEnabled = true;
+    private int _refreshInterval = 30;
+    private int _selectedHours = 24;
+    private string _serviceSearchText = "";
+    
+    private bool _settingsDialog;
+    private bool _showHealthTrendFullscreen;
+    
+    private System.Timers.Timer? _refreshTimer;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadInitialData();
-        await LoadTrendData();
-        await SetupSignalRConnection();
-        await InvokeAsync(StateHasChanged);
+        SetupAutoRefresh();
     }
 
     private async Task LoadInitialData()
     {
         try
         {
-            _services = await Http.GetFromJsonAsync<Service[]>(NavigationManager.ToAbsoluteUri("/api/healthcheck/services"));
-            UpdateHealthCounts();
+            _systemOverview = await DashboardService.GetSystemOverviewAsync();
+            await LoadServiceFilters();
+            await LoadChartData();
+            await LoadServiceRankings();
         }
         catch (Exception ex)
         {
-            Logger.LogError("Error loading initial data: {error}", ex.Message);
+            Snackbar.Add($"Error loading dashboard data: {ex.Message}", Severity.Error);
         }
     }
-    
-    private async Task LoadTrendData()
+
+    private async Task LoadServiceFilters()
     {
+        var knownServices = await DashboardService.GetAllServices();
+        _serviceFilters = knownServices.Select(service => new ServiceFilter
+        {
+            ServiceId = service.Id,
+            IsSelected = true,
+            StatusColor = GetRandomServiceColor()
+        }).ToList();
+    }
+
+    private async Task LoadChartData()
+    {
+        _healthTrendChartData.Clear();
+        _responseTimeChartData.Clear();
+
+        foreach (var service in _serviceFilters.Where(s => s.IsSelected))
+        {
+            try
+            {
+                var trendHistory = await DashboardService.GetServiceTrendHistoryAsync(service.ServiceId, 24);
+                
+                foreach (var trend in trendHistory)
+                {
+                    _healthTrendChartData.Add(new ChartData
+                    {
+                        Time = trend.CalculatedAt,
+                        Value = trend.OverallHealthScore,
+                        Label = service.ServiceId,
+                        Color = GetServiceColor(service.ServiceId)
+                    });
+                    
+                    _responseTimeChartData.Add(new ChartData
+                    {
+                        Time = trend.CalculatedAt,
+                        Value = trend.AverageResponseTime.TotalMilliseconds,
+                        Label = service.ServiceId,
+                        Color = GetServiceColor(service.ServiceId)
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading data for {service.ServiceId}: {ex.Message}");
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task LoadServiceRankings()
+    {
+        var selectedServices = GetSelectedServices();
+        if (selectedServices.Any())
+        {
+            try
+            {
+                var comparison = await DashboardService.CompareServicesAsync(selectedServices, _selectedHours);
+                _serviceRankings = comparison.ServiceComparisons.Select(sc => new ServiceRanking
+                {
+                    ServiceId = sc.ServiceId,
+                    Rank = sc.HealthRank,
+                    HealthScore = sc.TrendData.OverallHealthScore,
+                    Availability = sc.TrendData.AvailabilityPercentage,
+                    Trend = sc.TrendData.HealthTrend
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading service rankings: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task RefreshAllData()
+    {
+        _isRefreshing = true;
+        StateHasChanged();
+
         try
         {
-            var trendData = await Http.GetFromJsonAsync<SystemHealthTrend>(NavigationManager.ToAbsoluteUri("/api/analytics/health-trend"));
-            _dataPoints = trendData?.AggregatedDataPoints ?? [];
+            await DashboardService.RefreshAllTrendsAsync();
+            await LoadInitialData();
+            Snackbar.Add("Dashboard refreshed successfully!", Severity.Success);
         }
         catch (Exception ex)
         {
-            Logger.LogError("Error loading analytics data: {error}", ex.Message);
+            Snackbar.Add($"Error refreshing data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isRefreshing = false;
+            StateHasChanged();
         }
     }
 
-    private async Task SetupSignalRConnection()
+    private async Task SetTimeRange(int hours)
     {
-        _hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/notification"))
-            .Build();
-
-        _hubConnection.On<string, HealthCheckResult>("ReceiveNotification", (id, checkResult) =>
+        if (_selectedHours != hours)
         {
-            if (_services == null) return;
-            var index = Array.FindIndex(_services, s => s.Id == id);
-            if (index < 0) return;
-            var service = _services[index] with { LastCheckStatus = checkResult };
-            _services[index] = service;
-            UpdateHealthCounts();
-            _lastUpdated = DateTime.Now;
-            InvokeAsync(StateHasChanged);
-        });
-
-        try
-        {
-            await _hubConnection.StartAsync();
-            _isConnected = _hubConnection.State == HubConnectionState.Connected;
-        }
-        catch (Exception ex)
-        {
-            _isConnected = false;
-            Console.WriteLine($"Error connecting to SignalR: {ex.Message}");
+            _selectedHours = hours;
+            await LoadChartData();
+            await LoadServiceRankings();
         }
     }
 
-    private void UpdateHealthCounts()
+    private void SetupAutoRefresh()
     {
-        if (_services == null) return;
-
-        _healthyCount = _services.Count(s => s.LastCheckStatus.Status == Status.Healthy);
-        _degradedCount = _services.Count(s => s.LastCheckStatus.Status == Status.Degraded);
-        _criticalCount = _services.Count(s => s.LastCheckStatus.Status == Status.Critical);
-        
-        _overallHealthScore = _services.Length > 0 ? (double)_healthyCount / _services.Length * 100 : 0;
+        _refreshTimer = new System.Timers.Timer(_refreshInterval * 1000);
+        _refreshTimer.Elapsed += async (sender, e) =>
+        {
+            if (_autoRefreshEnabled)
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadInitialData();
+                    StateHasChanged();
+                });
+            }
+        };
+        _refreshTimer.Start();
     }
 
-    private Color GetStatusColor(Status status)
+    private void UpdateRefreshInterval(int newInterval)
     {
-        return status switch
+        _refreshInterval = newInterval;
+        _refreshTimer?.Dispose();
+        SetupAutoRefresh();
+    }
+
+    private List<ServiceFilter> FilteredServices => 
+        _serviceFilters.Where(s => string.IsNullOrEmpty(_serviceSearchText) || 
+                                  s.ServiceId.Contains(_serviceSearchText, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private List<string> GetSelectedServices() => 
+        _serviceFilters.Where(s => s.IsSelected).Select(s => s.ServiceId).ToList();
+
+    private Color GetHealthColor(double healthScore)
+    {
+        return healthScore switch
         {
-            Status.Healthy => Color.Success,
-            Status.Degraded => Color.Warning,
-            Status.Critical => Color.Error,
-            _ => Color.Default
+            >= 95 => Color.Success,
+            >= 85 => Color.Warning,
+            _ => Color.Error
         };
     }
 
-    public async ValueTask DisposeAsync()
+    private double GetServiceHealthPercentage()
     {
-        if (_hubConnection is not null)
-        {
-            await _hubConnection.DisposeAsync();
-        }
+        if (_systemOverview?.TotalServices == 0) return 0;
+        return (_systemOverview?.HealthyServices ?? 0) * 100.0 / (_systemOverview?.TotalServices ?? 1);
     }
 
-    private void NavigateToService(string serviceId) => NavigationManager.NavigateTo($"/services/{serviceId}");
+    private Color GetRandomServiceColor() => 
+        new[] { Color.Primary, Color.Secondary, Color.Tertiary, Color.Info, Color.Success }[Random.Shared.Next(5)];
     
-    private void NavigateToAnalytics() => NavigationManager.NavigateTo("/analytics");
-    
-    private void NavigateToAlerts() => NavigationManager.NavigateTo("/alerts");
-    
-    private void NavigateToDependencies() => NavigationManager.NavigateTo("/dependencies");
-    
-    private async Task RefreshHealthTrend()
+
+    private string GetServiceColor(string serviceId) => 
+        serviceId.GetHashCode() % 2 == 0 ? "#2196F3" : "#4CAF50";
+
+    private string GetServiceStatusText(string serviceId) => "Online"; // Simplified
+
+    private Color GetAlertColor(AlertSeverity severity) => severity switch
     {
-        await LoadTrendData();
+        AlertSeverity.Critical => Color.Error,
+        AlertSeverity.Warning => Color.Warning,
+        _ => Color.Info
+    };
+
+    private string GetAlertIcon(AlertSeverity severity) => severity switch
+    {
+        AlertSeverity.Critical => Icons.Material.Filled.Error,
+        AlertSeverity.Warning => Icons.Material.Filled.Warning,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private Task ExportHealthTrendChart()
+    {
+        // Implementation for chart export
+        Snackbar.Add("Chart export feature would be implemented here", Severity.Info);
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
     }
 }

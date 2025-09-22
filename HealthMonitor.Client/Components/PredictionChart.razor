@@ -1,0 +1,96 @@
+@using ApexCharts
+
+<div style="height: 100%;">
+    <ApexChart TItem="PredictionDataPoint"
+               Title="Health Predictions with Confidence Intervals"
+               Height="350"
+               Options="@_chartOptions">
+
+        @foreach (var serviceGroup in Data.GroupBy(d => d.ServiceId))
+        {
+            <ApexPointSeries TItem="PredictionDataPoint"
+                           Items="@serviceGroup.Select(MapToPredictionPoint).ToList()"
+                           Name="@serviceGroup.Key"
+                           SeriesType="SeriesType.Line"
+                           XValue="@(e => e.Time.ToString("HH:mm"))"
+                           YValue="@(e => (decimal)e.PredictedHealth)" />
+        }
+    </ApexChart>
+</div>
+
+@code {
+    [Parameter] public List<PredictionsPanel.PredictionChartData> Data { get; set; } = new();
+
+    private ApexChartOptions<PredictionDataPoint> _chartOptions = new();
+
+    protected override void OnInitialized()
+    {
+        _chartOptions = new ApexChartOptions<PredictionDataPoint>
+        {
+            Theme = new Theme { Mode = Mode.Light },
+            Chart = new Chart
+            {
+                Toolbar = new Toolbar { Show = true },
+                Zoom = new Zoom { Enabled = true }
+            },
+            Stroke = new Stroke
+            {
+                Curve = Curve.Smooth,
+                Width = 3,
+                DashArray = new List<int> { 0, 5 } // Solid and dashed lines
+            },
+            Fill = new Fill
+            {
+                Type = new List<FillType> { FillType.Solid, FillType.Pattern }
+            },
+            Xaxis = new XAxis
+            {
+                Type = XAxisType.Category,
+                Title = new AxisTitle { Text = "Time" }
+            },
+            Yaxis = new List<YAxis>
+            {
+                new YAxis
+                {
+                    Title = new AxisTitle { Text = "Predicted Health Score %" },
+                    Min = 0,
+                    Max = 100
+                }
+            },
+            Legend = new Legend { Position = LegendPosition.Top },
+            Annotations = new Annotations
+            {
+                Yaxis = new List<AnnotationsYAxis>
+                {
+                    new AnnotationsYAxis
+                    {
+                        Y = 95,
+                        BorderColor = "#00E396",
+                        Label = new Label
+                        {
+                            Text = "SLA Threshold",
+                            Style = new Style { Color = "#fff", Background = "#00E396" }
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    private PredictionDataPoint MapToPredictionPoint(PredictionsPanel.PredictionChartData data) =>
+        new PredictionDataPoint
+        {
+            Time = data.Time,
+            PredictedHealth = data.PredictedHealth,
+            Confidence = data.Confidence,
+            ServiceId = data.ServiceId
+        };
+
+    public class PredictionDataPoint
+    {
+        public DateTime Time { get; set; }
+        public double PredictedHealth { get; set; }
+        public double Confidence { get; set; }
+        public string ServiceId { get; set; } = "";
+    }
+}

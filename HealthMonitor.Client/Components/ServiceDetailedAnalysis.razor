@@ -1,0 +1,203 @@
+@using HealthMonitor.Client.Service
+@using HealthMonitor.Model.Analytics
+@inject DashboardService DashboardService
+
+<MudGrid>
+    @foreach (var serviceId in SelectedServices.Take(4))
+    {
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="2">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@serviceId</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudIconButton Icon="Icons.Material.Filled.MoreVert" Size="Size.Small" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (_serviceDetails.ContainsKey(serviceId))
+                    {
+                        var details = _serviceDetails[serviceId];
+                        <MudStack Spacing="3">
+                            <!-- Health Score Circle -->
+                            <MudStack Row Justify="Justify.Center">
+                                <MudProgressCircular Color="@GetHealthColor(details.OverallHealthScore)" 
+                                                   Size="Size.Large" 
+                                                   Value="@details.OverallHealthScore" 
+                                                   Min="0" Max="100">
+                                    <MudText Typo="Typo.body1">@($"{details.OverallHealthScore:F1}%")</MudText>
+                                </MudProgressCircular>
+                            </MudStack>
+
+                            <!-- Key Metrics -->
+                            <MudGrid>
+                                <MudItem xs="6">
+                                    <MudStack AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Availability</MudText>
+                                        <MudText Typo="Typo.body1" Color="@GetHealthColor(details.AvailabilityPercentage)">
+                                            @($"{details.AvailabilityPercentage:F2}%")
+                                        </MudText>
+                                    </MudStack>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudStack AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Avg Response</MudText>
+                                        <MudText Typo="Typo.body1">
+                                            @($"{details.AverageResponseTime.TotalMilliseconds:F0}ms")
+                                        </MudText>
+                                    </MudStack>
+                                </MudItem>
+                            </MudGrid>
+
+                            <!-- Trend Indicators -->
+                            <MudCard Variant="Variant.Outlined">
+                                <MudCardContent Class="pa-3">
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Row AlignItems="AlignItems.Center">
+                                            <MudIcon Icon="@GetTrendIcon(details.HealthTrend)" 
+                                                    Color="@GetTrendColor(details.HealthTrend)" />
+                                            <MudText Typo="Typo.body2">@details.HealthTrend</MudText>
+                                        </MudStack>
+                                        <MudChip T="string" Size="Size.Small" 
+                                                Color="@(details.TrendConfidence > 0.7 ? Color.Success : Color.Warning)">
+                                            @($"{details.TrendConfidence:P0} confidence")
+                                        </MudChip>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+
+                            <!-- Anomalies -->
+                            @if (details.DetectedAnomalies.Any())
+                            {
+                                <MudExpansionPanels MultiExpansion="false" Variant="Variant.Outlined">
+                                    <MudExpansionPanel IsInitiallyExpanded="false">
+                                        <TitleContent>
+                                            <div style="display: flex; align-items: center;">
+                                                <MudIcon Icon="Icons.Material.Filled.Warning" Color="Color.Warning" class="mr-3" />
+                                                <MudText>@($"{details.DetectedAnomalies.Count} Anomalies Detected")</MudText>
+                                            </div>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudList T="string" Dense>
+                                                @foreach (var anomaly in details.DetectedAnomalies.Take(3))
+                                                {
+                                                    <MudListItem>
+                                                        <MudStack>
+                                                            <MudStack Row AlignItems="AlignItems.Center">
+                                                                <MudIcon Icon="@GetAnomalyIcon(anomaly.Type)" 
+                                                                        Color="@GetAnomalyColor(anomaly.Severity)" 
+                                                                        Size="Size.Small" />
+                                                                <MudText Typo="Typo.body2" Style="font-weight: bold;">
+                                                                    @anomaly.Type
+                                                                </MudText>
+                                                                <MudChip Size="Size.Small" 
+                                                                        Color="@GetAnomalyColor(anomaly.Severity)">
+                                                                    @($"{anomaly.Severity:P0}")
+                                                                </MudChip>
+                                                            </MudStack>
+                                                            <MudText Typo="Typo.caption" Style="margin-left: 20px;">
+                                                                @anomaly.Description
+                                                            </MudText>
+                                                        </MudStack>
+                                                    </MudListItem>
+                                                }
+                                            </MudList>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 200px;">
+                            <MudProgressCircular Indeterminate="true" />
+                            <MudText>Loading service details...</MudText>
+                        </MudStack>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Parameter] public List<string> SelectedServices { get; set; } = new();
+    [Parameter] public int TimeRangeHours { get; set; } = 24;
+
+    private Dictionary<string, HealthTrendData> _serviceDetails = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedServices.Any())
+        {
+            await LoadServiceDetails();
+        }
+    }
+
+    private async Task LoadServiceDetails()
+    {
+        _serviceDetails.Clear();
+
+        var tasks = SelectedServices.Select(async serviceId =>
+        {
+            try
+            {
+                var details = await DashboardService.GetServiceTrendAsync(serviceId, TimeRangeHours);
+                return new { ServiceId = serviceId, Details = details };
+            }
+            catch
+            {
+                return null;
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var result in results.Where(r => r != null))
+        {
+            _serviceDetails[result!.ServiceId] = result.Details;
+        }
+
+        StateHasChanged();
+    }
+
+    private Color GetHealthColor(double score) => score switch
+    {
+        >= 95 => Color.Success,
+        >= 85 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private Color GetTrendColor(HealthTrendDirection trend) => trend switch
+    {
+        HealthTrendDirection.Improving => Color.Success,
+        HealthTrendDirection.Declining => Color.Error,
+        HealthTrendDirection.Volatile => Color.Warning,
+        _ => Color.Default
+    };
+
+    private string GetTrendIcon(HealthTrendDirection trend) => trend switch
+    {
+        HealthTrendDirection.Improving => Icons.Material.Filled.TrendingUp,
+        HealthTrendDirection.Declining => Icons.Material.Filled.TrendingDown,
+        HealthTrendDirection.Volatile => Icons.Material.Filled.SwapVert,
+        _ => Icons.Material.Filled.TrendingFlat
+    };
+
+    private Color GetAnomalyColor(double severity) => severity switch
+    {
+        >= 0.8 => Color.Error,
+        >= 0.5 => Color.Warning,
+        _ => Color.Info
+    };
+
+    private string GetAnomalyIcon(AnomalyType type) => type switch
+    {
+        AnomalyType.LongOutage => Icons.Material.Filled.PowerOff,
+        AnomalyType.HighResponseTime => Icons.Material.Filled.Schedule,
+        AnomalyType.FrequentFailures => Icons.Material.Filled.Error,
+        AnomalyType.PerformanceDegradation => Icons.Material.Filled.TrendingDown,
+        _ => Icons.Material.Filled.Warning
+    };
+}

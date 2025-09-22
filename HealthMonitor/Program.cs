@@ -1,11 +1,15 @@
+using ApexCharts;
 using HealthMonitor;
+using HealthMonitor.Client.Service;
 using HealthMonitor.Components;
 using HealthMonitor.Extensions;
 using HealthMonitor.Hub;
 using HealthMonitor.Model;
 using HealthMonitor.Services;
+using HealthMonitor.Services.BgService;
 using HealthMonitor.Services.HealthCheckServices;
 using Microsoft.AspNetCore.Mvc;
+using MudBlazor;
 using MudBlazor.Services;
 using Orleans.Configuration;
 
@@ -28,7 +32,7 @@ builder.UseOrleans(siloBuilder =>
     siloBuilder.UseDashboard(cfg => cfg.HostSelf = true);
 });
 
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<HttpHealthCheckService>();
 builder.Services.AddSingleton<IHealthCheckServiceFactory, HealthCheckServiceFactory>();
 builder.Services.ConfigureHealthChecks(builder.Configuration);
 
@@ -36,11 +40,25 @@ builder.Services.ConfigureHealthChecks(builder.Configuration);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
-builder.Services.AddMudServices();
+builder.Services.AddMudServices(config =>
+{
+    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomLeft;
+    config.SnackbarConfiguration.PreventDuplicates = false;
+    config.SnackbarConfiguration.NewestOnTop = false;
+    config.SnackbarConfiguration.ShowCloseIcon = true;
+    config.SnackbarConfiguration.VisibleStateDuration = 10000;
+    config.SnackbarConfiguration.HideTransitionDuration = 500;
+    config.SnackbarConfiguration.ShowTransitionDuration = 500;
+    config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
+});
+builder.Services.AddApexCharts();
 
 builder.Services.AddScoped<IServiceRegistry, ServiceRegistry>();
-builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IHealthTrendService, HealthTrendService>();
+builder.Services.AddTransient<HealthTrendCalculator>();
 builder.Services.AddHostedService<GrainInitializerBackgroundService>();
+builder.Services.AddHostedService<HealthTrendCalculationService>();
+builder.Services.AddScoped<DashboardService>();
 
 var app = builder.Build();
 
@@ -69,17 +87,44 @@ app.MapRazorComponents<App>()
 
 app.MapHealthChecks("/health");
 
-var healthCheckApi = app.MapGroup("/api/healthcheck");
-healthCheckApi.MapGet("/services", ([FromServices]IServiceRegistry appService, CancellationToken token)
+var healthTrendApi = app.MapGroup("/api/healthtrends");
+healthTrendApi.MapGet("/services", ([FromServices]IServiceRegistry appService, CancellationToken token)
     => TypedResults.Ok(appService.GetAllServices(token)));
-
-
-var analyticApi = app.MapGroup("/api/analytics");
-analyticApi.MapGet("/health-trend", async ([FromServices]IAnalyticsService analyticsService, CancellationToken token, [FromQuery] int days = 7)
+healthTrendApi.MapGet("/service/{serviceId}", 
+    async (string serviceId, [FromServices]IHealthTrendService service, CancellationToken token, [FromQuery] int hours = 24)
+    =>
+    {
+        var trend = await service.GetServiceTrend(serviceId, hours, token);
+        return TypedResults.Ok(trend);
+    });
+healthTrendApi.MapGet("/service/{serviceId}/history", 
+    async (string serviceId, [FromServices]IHealthTrendService service, CancellationToken token, [FromQuery] int count = 10)
     =>
 {
-    var results = await analyticsService.GetSystemHealthTrend(TimeSpan.FromDays(days), token);
-    return TypedResults.Ok(results);
+    var trend = await service.GetServiceTrendHistory(serviceId, count, token);
+    return TypedResults.Ok(trend);
 });
+healthTrendApi.MapGet("/system/overview", 
+    async ([FromServices]IHealthTrendService service, CancellationToken token)
+        =>
+    {
+        var trend = await service.GetSystemOverview(token);
+        return TypedResults.Ok(trend);
+    });
+healthTrendApi.MapPost("/compare", 
+    async ([FromServices]IHealthTrendService service, [FromBody]CompareServicesRequest request, CancellationToken token)
+        =>
+    {
+        var trend = await service.CompareServices(request, token);
+        return TypedResults.Ok(trend);
+    });
+healthTrendApi.MapGet("/refresh", 
+    async ([FromServices]IHealthTrendService service, CancellationToken token)
+        =>
+    {
+        await service.RefreshAllTrends(token);
+        return TypedResults.Ok(new { message = "Trend refresh initiated" });
+    });
+
 app.Map("/orleans-dashboard", x => x.UseOrleansDashboard());
 app.Run();

@@ -1,0 +1,41 @@
+@using HealthMonitor.Client.Model
+<MudDialog @bind-IsOpen="IsOpen" Options="@_dialogOptions">
+    <DialogContent>
+        <MudStack>
+            <MudText Typo="Typo.h5">@Title</MudText>
+            <div style="height: 500px;">
+                <HealthTrendChart Data="@ChartData" Height="500" />
+            </div>
+        </MudStack>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton StartIcon="Icons.Material.Filled.Download" OnClick="ExportChart">
+            Export
+        </MudButton>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public List<ChartData> ChartData { get; set; } = new();
+
+    private DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Large,
+        FullWidth = true
+    };
+
+    private async Task Close()
+    {
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private void ExportChart()
+    {
+        // Implement chart export functionality
+    }
+}
