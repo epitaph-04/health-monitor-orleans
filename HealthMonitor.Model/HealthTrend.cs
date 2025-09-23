@@ -1,6 +1,6 @@
 using Orleans;
 
-namespace HealthMonitor.Model.Analytics;
+namespace HealthMonitor.Model;
 
 [GenerateSerializer]
 public class HealthTrendData

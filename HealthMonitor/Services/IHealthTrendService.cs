@@ -1,5 +1,4 @@
 using HealthMonitor.Model;
-using HealthMonitor.Model.Analytics;
 
 namespace HealthMonitor.Services;
 

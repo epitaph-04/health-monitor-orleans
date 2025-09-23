@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using HealthMonitor.Grains;
+using HealthMonitor.Grains.Abstraction;
 using HealthMonitor.Model;
 using Microsoft.Extensions.Options;
 

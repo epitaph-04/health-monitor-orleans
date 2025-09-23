@@ -1,5 +1,3 @@
-using HealthMonitor.Model.Analytics;
-
 namespace HealthMonitor.Model;
 
 public record Service : ServiceMetadata

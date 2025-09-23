@@ -1,4 +1,5 @@
 using HealthMonitor.Grains;
+using HealthMonitor.Grains.Abstraction;
 using HealthMonitor.Model;
 using Microsoft.Extensions.Options;
 
@@ -11,9 +12,10 @@ public class GrainInitializerBackgroundService(IOptions<ServiceConfigurations> o
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var aggregatorGrain = client.GetGrain<IHealthTrendAggregatorGrain>("system");
         foreach (var configuration in _serviceConfigurations)
         {
-            await client.GetGrain<IHealthCheckGrain>(configuration.Id).Register(configuration.IntervalMinutes, CancellationToken.None);
+            await aggregatorGrain.RegisterService(configuration, stoppingToken);
         }
     }
 }

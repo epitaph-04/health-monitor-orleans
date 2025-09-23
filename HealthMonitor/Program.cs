@@ -1,40 +1,20 @@
 using ApexCharts;
-using HealthMonitor;
 using HealthMonitor.Client.Service;
 using HealthMonitor.Components;
-using HealthMonitor.Extensions;
 using HealthMonitor.Hub;
 using HealthMonitor.Model;
 using HealthMonitor.Services;
 using HealthMonitor.Services.BgService;
-using HealthMonitor.Services.HealthCheckServices;
 using Microsoft.AspNetCore.Mvc;
 using MudBlazor;
 using MudBlazor.Services;
-using Orleans.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<ServiceConfigurations>(builder.Configuration.GetRequiredSection("healthCheckConfiguration"));
 
 builder.AddKeyedRedisClient("orleans-redis");
-builder.Logging.AddFilter("Orleans.Runtime.Placement.Rebalancing", LogLevel.Trace);
-builder.UseOrleans(siloBuilder =>
-{
-    siloBuilder
-        .Configure<GrainCollectionOptions>(o => { o.CollectionQuantum = TimeSpan.FromSeconds(30); })
-        .Configure<ResourceOptimizedPlacementOptions>(o => { o.LocalSiloPreferenceMargin = 0; })
-        .Configure<ActivationRebalancerOptions>(o =>
-        {
-            o.RebalancerDueTime = TimeSpan.FromSeconds(30);
-            o.SessionCyclePeriod = TimeSpan.FromSeconds(30);
-        });
-    siloBuilder.UseDashboard(cfg => cfg.HostSelf = true);
-});
-
-builder.Services.AddHttpClient<HttpHealthCheckService>();
-builder.Services.AddSingleton<IHealthCheckServiceFactory, HealthCheckServiceFactory>();
-builder.Services.ConfigureHealthChecks(builder.Configuration);
+builder.UseOrleansClient();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -55,9 +35,7 @@ builder.Services.AddApexCharts();
 
 builder.Services.AddScoped<IServiceRegistry, ServiceRegistry>();
 builder.Services.AddScoped<IHealthTrendService, HealthTrendService>();
-builder.Services.AddTransient<HealthTrendCalculator>();
 builder.Services.AddHostedService<GrainInitializerBackgroundService>();
-builder.Services.AddHostedService<HealthTrendCalculationService>();
 builder.Services.AddScoped<DashboardService>();
 
 var app = builder.Build();
@@ -126,5 +104,5 @@ healthTrendApi.MapGet("/refresh",
         return TypedResults.Ok(new { message = "Trend refresh initiated" });
     });
 
-app.Map("/orleans-dashboard", x => x.UseOrleansDashboard());
+//app.Map("/orleans-dashboard", x => x.UseOrleansDashboard());
 app.Run();

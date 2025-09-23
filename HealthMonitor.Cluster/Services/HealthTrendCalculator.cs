@@ -1,17 +1,10 @@
 using HealthMonitor.Model;
-using HealthMonitor.Model.Analytics;
+using Microsoft.Extensions.Logging;
 
-namespace HealthMonitor.Services;
+namespace HealthMonitor.Cluster.Services;
 
 public class HealthTrendCalculator
 {
-    private readonly ILogger<HealthTrendCalculator> _logger;
-
-    public HealthTrendCalculator(ILogger<HealthTrendCalculator> logger)
-    {
-        _logger = logger;
-    }
-
     public ValueTask<HealthTrendData> CalculateTrend(
         string serviceId, 
         List<HealthCheckRecord> records, 

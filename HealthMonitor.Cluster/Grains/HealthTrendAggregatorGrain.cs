@@ -1,29 +1,48 @@
-using HealthMonitor.Model.Analytics;
-using HealthMonitor.Services;
+using HealthMonitor.Grains.Abstraction;
+using HealthMonitor.Model;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Orleans.Providers;
 
-namespace HealthMonitor.Grains;
+namespace HealthMonitor.Cluster.Grains;
 
-public interface IHealthTrendAggregatorGrain : IGrainWithStringKey
+[GenerateSerializer]
+public class HealthTrendAggregatorState
 {
-    ValueTask<Dictionary<string, HealthTrendData>> GetAllServiceTrends(TimeSpan analysisWindow, CancellationToken token);
-    ValueTask<HealthTrendComparisonReport> CompareServiceTrends(List<string> serviceIds, TimeSpan window, CancellationToken token);
-    ValueTask<SystemHealthOverview> GetSystemOverview(CancellationToken token);
-    ValueTask RefreshAllTrends(CancellationToken token);
+    [Id(0)]
+    public HashSet<string> ServiceIds { get; set; } = [];
 }
 
+[StorageProvider(ProviderName = "Default")]
 public class HealthTrendAggregatorGrain(
-    IServiceRegistry serviceRegistry,
-    ILogger<HealthTrendAggregatorGrain> logger,
-    IClusterClient clusterClient)
-    : Grain, IHealthTrendAggregatorGrain
+    IConfiguration configuration,
+    IClusterClient clusterClient,
+    ILogger<HealthTrendAggregatorGrain> logger)
+    : Grain<HealthTrendAggregatorState>, IHealthTrendAggregatorGrain, IRemindable
 {
+    private const string HealthTrendAggregatorReminder = "HEALTH_TREND_AGGREGATOR_REMINDER";
+    public async ValueTask Initialize(CancellationToken token)
+    {
+        var interval = configuration.GetValue("HealthTrends:CalculationInterval", TimeSpan.FromHours(1));
+        await this.RegisterOrUpdateReminder(
+            $"{HealthTrendAggregatorReminder}-{this.GetPrimaryKeyString()}", 
+            interval,
+            interval);
+    }
+
+    public async ValueTask RegisterService(ServiceConfiguration serviceConfiguration, CancellationToken token)
+    {
+        State.ServiceIds.Add(serviceConfiguration.Id);
+        await WriteStateAsync();
+        await clusterClient.GetGrain<IHealthCheckGrain>(serviceConfiguration.Id).Register(serviceConfiguration, token);
+    }
+
     public async ValueTask<Dictionary<string, HealthTrendData>> GetAllServiceTrends(TimeSpan analysisWindow, CancellationToken token)
     {
         // This would need to be configured with known service IDs or discovered dynamically
-        var serviceIds = await GetKnownServiceIds(token);
         var trends = new Dictionary<string, HealthTrendData>();
         
-        var tasks = serviceIds.Select(async serviceId =>
+        var tasks = State.ServiceIds.Select(async serviceId =>
         {
             try
             {
@@ -96,7 +115,6 @@ public class HealthTrendAggregatorGrain(
 
     public async ValueTask<SystemHealthOverview> GetSystemOverview(CancellationToken token)
     {
-        var serviceIds = await GetKnownServiceIds(token);
         var trends = await GetAllServiceTrends(TimeSpan.FromDays(1), token); // Last 24 hours
         
         var healthyServices = trends.Values.Count(t => t.OverallHealthScore >= 95);
@@ -130,7 +148,7 @@ public class HealthTrendAggregatorGrain(
 
         return new SystemHealthOverview
         {
-            TotalServices = serviceIds.Count,
+            TotalServices = State.ServiceIds.Count,
             HealthyServices = healthyServices,
             ProblematicServices = problematicServices,
             OverallSystemHealth = overallHealth,
@@ -143,9 +161,7 @@ public class HealthTrendAggregatorGrain(
 
     public async ValueTask RefreshAllTrends(CancellationToken token)
     {
-        var serviceIds = await GetKnownServiceIds(token);
-        
-        var refreshTasks = serviceIds.Select(async serviceId =>
+        var refreshTasks = State.ServiceIds.Select(async serviceId =>
         {
             try
             {
@@ -159,14 +175,11 @@ public class HealthTrendAggregatorGrain(
         });
 
         await Task.WhenAll(refreshTasks);
-        logger.LogInformation("Refreshed trend data for {Count} services", serviceIds.Count);
+        logger.LogInformation("Refreshed trend data for {Count} services", State.ServiceIds.Count);
     }
-
-    private async ValueTask<List<string>> GetKnownServiceIds(CancellationToken token)
-    {
-        var serviceIds = await serviceRegistry.GetAllServiceIds();
-        return serviceIds.ToList();
-    }
+    
+    async Task IRemindable.ReceiveReminder(string reminderName, TickStatus status) 
+        => await RefreshAllTrends(CancellationToken.None).ConfigureAwait(false);
 
     private List<string> GenerateHealthInsights(HealthTrendData trendData)
     {

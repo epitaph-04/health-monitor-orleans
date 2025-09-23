@@ -1,6 +1,6 @@
 using HealthMonitor.Grains;
+using HealthMonitor.Grains.Abstraction;
 using HealthMonitor.Model;
-using HealthMonitor.Model.Analytics;
 
 namespace HealthMonitor.Services;
 

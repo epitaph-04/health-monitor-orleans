@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using HealthMonitor.Model;
-using HealthMonitor.Model.Analytics;
 using Microsoft.AspNetCore.Components;
 
 namespace HealthMonitor.Client.Service;

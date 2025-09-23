@@ -1,17 +1,10 @@
+using HealthMonitor.Cluster.Services;
+using HealthMonitor.Grains.Abstraction;
 using HealthMonitor.Model;
-using HealthMonitor.Model.Analytics;
-using HealthMonitor.Services;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
-namespace HealthMonitor.Grains;
-
-public interface IHealthTrendGrain : IGrainWithStringKey
-{
-    ValueTask<HealthTrendData> CalculateTrend(TimeSpan analysisWindow, CancellationToken token);
-    ValueTask<HealthTrendData> GetLatestTrend(CancellationToken token);
-    ValueTask<List<HealthTrendData>> GetTrendHistory(int count, CancellationToken token);
-    ValueTask RefreshTrendData(CancellationToken token);
-}
+namespace HealthMonitor.Cluster.Grains;
 
 [GenerateSerializer]
 public class HealthTrendState
@@ -128,23 +121,26 @@ public class HealthTrendGrain(
 
         // For 3 months of data, we might need to query multiple grains
         // Each grain could store data for a specific time period (e.g., daily/weekly grains)
-        var timePartitions = GetTimePartitions(fromTime, toTime);
+        //var timePartitions = GetTimePartitions(fromTime, toTime);
         
-        foreach (var partition in timePartitions)
-        {
+        //foreach (var partition in timePartitions)
+        //{
             try
             {
-                var grainKey = $"{serviceId}-{partition:yyyy-MM-dd}";
+                //var grainKey = $"{serviceId}-{partition:yyyy-MM-dd}";
+                var grainKey = serviceId;
                 var dataGrain = GrainFactory.GetGrain<IHealthCheckGrain>(grainKey);
                 var records = await dataGrain.GetHealthRecords(fromTime, toTime, token);
                 allRecords.AddRange(records);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to get data from partition {Partition} for service {ServiceId}", 
-                    partition, serviceId);
+                //logger.LogWarning(ex, "Failed to get data from partition {Partition} for service {ServiceId}", 
+                //    partition, serviceId);
+                logger.LogWarning(ex, "Failed to get data for service {ServiceId}", 
+                    serviceId);
             }
-        }
+        //}
 
         return allRecords.OrderBy(r => r.Timestamp).ToList();
     }

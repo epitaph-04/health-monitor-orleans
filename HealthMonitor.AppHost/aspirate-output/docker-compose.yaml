@@ -1,0 +1,76 @@
+services:
+  aspire-dashboard:
+    container_name: "aspire-dashboard"
+    image: "mcr.microsoft.com/dotnet/aspire-dashboard:9.0"
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+    - target: 18888
+      published: 18888
+    restart: unless-stopped
+  orleans-redis:
+    container_name: "orleans-redis"
+    image: "docker.io/library/redis:7.4"
+    environment:
+      REDIS_PASSWORD: "BkYn2Gw6q0QsL7pA7YoM!O"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
+      OTEL_SERVICE_NAME: "orleans-redis"
+    ports:
+    - target: 6379
+      published: 6379
+    command:
+    - "-c"
+    - "redis-server --requirepass $REDIS_PASSWORD"
+    - "/bin/sh"
+    restart: unless-stopped
+  health-monitor-cluster:
+    container_name: "health-monitor-cluster"
+    image: "health-monitor-cluster:latest"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      Orleans__Clustering__ProviderType: "Redis"
+      Orleans__Clustering__ServiceKey: "orleans-redis"
+      ConnectionStrings__orleans-redis: "orleans-redis:6379,password=BkYn2Gw6q0QsL7pA7YoM!O"
+      Orleans__ClusterId: "5GWd8kQgjXXz39KEOY9ctWpHY"
+      Orleans__ServiceId: "CwJ8zkSHN1huIWQsrvkuN9k9P"
+      Orleans__EnableDistributedTracing: "true"
+      Orleans__Reminders__ProviderType: "Redis"
+      Orleans__Reminders__ServiceKey: "orleans-redis"
+      Orleans__GrainStorage__Default__ProviderType: "Redis"
+      Orleans__GrainStorage__Default__ServiceKey: "orleans-redis"
+      Orleans__Endpoints__SiloPort: "8000"
+      Orleans__Endpoints__GatewayPort: "8001"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
+      OTEL_SERVICE_NAME: "health-monitor-cluster"
+    ports:
+    - target: 8000
+      published: 10000
+    - target: 8001
+      published: 10001
+    restart: unless-stopped
+  health-monitor:
+    container_name: "health-monitor"
+    image: "health-monitor:latest"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "8080"
+      Orleans__Clustering__ProviderType: "Redis"
+      Orleans__Clustering__ServiceKey: "orleans-redis"
+      ConnectionStrings__orleans-redis: "orleans-redis:6379,password=BkYn2Gw6q0QsL7pA7YoM!O"
+      Orleans__ClusterId: "5GWd8kQgjXXz39KEOY9ctWpHY"
+      Orleans__ServiceId: "CwJ8zkSHN1huIWQsrvkuN9k9P"
+      Orleans__EnableDistributedTracing: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
+      OTEL_SERVICE_NAME: "health-monitor"
+    ports:
+    - target: 8080
+      published: 10002
+    - target: 8443
+      published: 10003
+    restart: unless-stopped
