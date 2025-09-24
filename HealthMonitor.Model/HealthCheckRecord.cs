@@ -3,6 +3,7 @@ using Orleans;
 namespace HealthMonitor.Model;
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.HealthCheckRecord")]
 public record HealthCheckRecord
 {
     [Id(0)]

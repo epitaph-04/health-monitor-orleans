@@ -15,4 +15,8 @@
         <PackageReference Include="OrleansDashboard" Version="8.2.0" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\HealthMonitor.Grains.Abstraction\HealthMonitor.Grains.Abstraction.csproj" />
+    </ItemGroup>
+
 </Project>

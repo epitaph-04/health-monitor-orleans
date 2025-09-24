@@ -6,7 +6,7 @@
     "Tags": [
       "latest"
     ],
-    "Builder": "docker",
+    "Builder": "podman",
     "BuildArgs": null,
     "Context": null
   }

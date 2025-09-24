@@ -11,12 +11,13 @@
         <PackageReference Include="Aspire.StackExchange.Redis" Version="9.4.2" />
         <PackageReference Include="Microsoft.Orleans.Client" Version="9.2.1" />
         <PackageReference Include="Microsoft.Orleans.Clustering.Redis" Version="9.2.1" />
-        <ProjectReference Include="..\HealthMonitor.Client\HealthMonitor.Client.csproj"/>
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0-rc.1.25451.107"/>
-        <ProjectReference Include="..\HealthMonitor.Grains.Abstraction\HealthMonitor.Grains.Abstraction.csproj" />
-        <ProjectReference Include="..\HealthMonitor.Model\HealthMonitor.Model.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\HealthMonitor.Client\HealthMonitor.Client.csproj"/>
+        <ProjectReference Include="..\HealthMonitor.Grains.Abstraction\HealthMonitor.Grains.Abstraction.csproj" />
+    </ItemGroup>  
     <ItemGroup>
       <Folder Include="wwwroot\lib\" />
     </ItemGroup>

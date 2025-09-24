@@ -1,0 +1,34 @@
+appsettings:
+  cluster:
+    healthTrends:
+      calculationInterval: "01:00:00"
+      retentionPeriod: "90.00:00:00"
+      slaTargets:
+        availabilityPercentage: 99.9
+        responseTimeSeconds: 1.0
+  #server:
+  #  healthCheckConfiguration:
+  #    - id: cf-backend
+  #      name: CF Backend
+  #      type: Http
+  #      target: http://campaign-workflow-backend/campaign-workflow/v1/health/liveness
+  #      expectedResponseCode: 200
+  #      method: GET
+  #      timeoutSeconds: 10
+  #      intervalMinutes: 1
+  #    - id: audit-logger
+  #      name: Audit Logger
+  #      type: Http
+  #      target: http://audit-logger/health/liveness
+  #      expectedResponseCode: 200
+  #      method: GET
+  #      timeoutSeconds: 10
+  #      intervalMinutes: 1
+  #    - id: maf-notifier
+  #      name: MAF Notifier
+  #      type: Http
+  #      target: http://maf-notifier/health/liveness
+  #      expectedResponseCode: 200
+  #      method: GET
+  #      timeoutSeconds: 10
+  #      intervalMinutes: 1

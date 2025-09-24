@@ -14,7 +14,7 @@ var healthMonitorCluster = builder
     .AddProject<Projects.HealthMonitor_Cluster>("health-monitor-cluster")
     .WithReference(orleans)
     .WaitFor(redis)
-    .WithReplicas(2);
+    .WithReplicas(1);
 
 builder
     .AddProject<Projects.HealthMonitor_Cluster_Dashboard>("health-monitor-cluster-dashboard")

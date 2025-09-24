@@ -3,6 +3,7 @@ using Orleans;
 namespace HealthMonitor.Model;
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.HealthTrendData")]
 public class HealthTrendData
 {
     [Id(0)]
@@ -62,6 +63,7 @@ public enum HealthTrendDirection
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.HourlyHealthSummary")]
 public record HourlyHealthSummary
 {
     [Id(0)]
@@ -79,6 +81,7 @@ public record HourlyHealthSummary
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.DailyHealthSummary")]
 public record DailyHealthSummary
 {
     [Id(0)]
@@ -100,6 +103,7 @@ public record DailyHealthSummary
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.WeeklyHealthSummary")]
 public record WeeklyHealthSummary
 {
     [Id(0)]
@@ -119,6 +123,7 @@ public record WeeklyHealthSummary
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.HealthAnomaly")]
 public class HealthAnomaly
 {
     [Id(0)]
@@ -146,6 +151,7 @@ public enum AnomalyType
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.SlaMetrics")]
 public record SlaMetrics
 {
     [Id(0)]
@@ -167,6 +173,7 @@ public record SlaMetrics
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.HealthPrediction")]
 public record HealthPrediction
 {
     [Id(0)]
@@ -180,6 +187,7 @@ public record HealthPrediction
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.HealthDataStatistics")]
 public record HealthDataStatistics
 {
     [Id(0)]
@@ -201,6 +209,7 @@ public record HealthDataStatistics
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.HealthTrendComparisonReport")]
 public class HealthTrendComparisonReport
 {
     [Id(0)]
@@ -214,6 +223,7 @@ public class HealthTrendComparisonReport
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.ServiceTrendComparison")]
 public class ServiceTrendComparison
 {
     [Id(0)]
@@ -229,6 +239,7 @@ public class ServiceTrendComparison
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.SystemHealthRanking")]
 public class SystemHealthRanking
 {
     [Id(0)]
@@ -242,6 +253,7 @@ public class SystemHealthRanking
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.SystemHealthOverview")]
 public class SystemHealthOverview
 {
     [Id(0)]
@@ -261,6 +273,7 @@ public class SystemHealthOverview
 }
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.SystemHealthAlert")]
 public record SystemHealthAlert
 {
     [Id(0)]

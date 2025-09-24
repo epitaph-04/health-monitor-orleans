@@ -5,6 +5,7 @@ namespace HealthMonitor.Model;
 public class ServiceConfigurations : List<ServiceConfiguration>;
 
 [GenerateSerializer]
+[Alias("HealthMonitor.Model.ServiceConfiguration")]
 public class ServiceConfiguration
 {
     [Id(0)]

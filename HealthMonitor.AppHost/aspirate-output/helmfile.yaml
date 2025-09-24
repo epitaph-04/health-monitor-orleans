@@ -1,0 +1,11 @@
+helmDefaults:
+  wait: true
+  atomic: false
+  timeout: 180
+
+releases:
+  - name: cf-monitor
+    chart: Chart
+    namespace: default
+    values:
+      - values.yaml.gotmpl

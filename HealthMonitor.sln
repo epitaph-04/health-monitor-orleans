@@ -14,6 +14,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Grains.Abstra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Cluster.Dashboard", "HealthMonitor.Cluster.Dashboard\HealthMonitor.Cluster.Dashboard.csproj", "{7F4F3F7A-384F-47B2-B2E3-66C3D2046B5C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docker Resource", "Docker Resource", "{DB62F9F3-CA3B-4C94-95EC-FA4D7D8FF29D}"
+	ProjectSection(SolutionItems) = preProject
+		dockerfile-cluster = dockerfile-cluster
+		dockerfile-cluster-dashboard = dockerfile-cluster-dashboard
+		dockerfile-server = dockerfile-server
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

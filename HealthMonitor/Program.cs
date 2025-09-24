@@ -96,7 +96,7 @@ healthTrendApi.MapPost("/compare",
         var trend = await service.CompareServices(request, token);
         return TypedResults.Ok(trend);
     });
-healthTrendApi.MapGet("/refresh", 
+healthTrendApi.MapPost("/refresh", 
     async ([FromServices]IHealthTrendService service, CancellationToken token)
         =>
     {

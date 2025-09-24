@@ -23,8 +23,4 @@
         <ProjectReference Include="..\HealthMonitor\HealthMonitor.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="aspirate-output\" />
-    </ItemGroup>
-
 </Project>
