@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Text;
 using HealthMonitor.Grains.Abstraction;
 using HealthMonitor.Model;
-using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
 namespace HealthMonitor.Cluster.Grains;
@@ -42,7 +41,7 @@ public class HttpHealthCheckGrain(
         await WriteStateAsync();
         await this.RegisterOrUpdateReminder(
             $"{HealthCheckReminder}-{this.GetPrimaryKeyString()}", 
-            TimeSpan.FromMinutes(configuration.IntervalMinutes),
+            TimeSpan.Zero,
             TimeSpan.FromMinutes(configuration.IntervalMinutes));
     }
 

@@ -1,0 +1,63 @@
+@using ApexCharts
+@using HealthMonitor.Client.Model
+
+<div style="height: @(Height)px;">
+    <ApexChart TItem="ResponseTimeDataPoint"
+               Title="Response time Over Time"
+               Height="@Height"
+               Options="@_chartOptions">
+
+        @foreach (var serviceGroup in Data.GroupBy(d => d.Label))
+        {
+            <ApexPointSeries TItem="ResponseTimeDataPoint"
+                             Items="@serviceGroup.Select(MapToResponseTimePoint).ToList()"
+                             Name="@serviceGroup.Key"
+                             SeriesType="SeriesType.Line"
+                             XValue="@(e => e.Time.ToString("HH:mm"))"
+                             YValue="@(e => (decimal)e.ResponseTime)"/>
+        }
+    </ApexChart>
+</div>
+
+@code {
+    [Parameter] public List<ChartData> Data { get; set; } = new();
+    [Parameter] public int Height { get; set; } = 200;
+    
+    private readonly ApexChartOptions<ResponseTimeDataPoint> _chartOptions = new()
+    {
+        Chart = new Chart
+        {
+            Toolbar = new Toolbar { Show = true },
+            Zoom = new Zoom { Enabled = true }
+        },
+        Fill = new Fill
+        {
+            Type = new List<FillType> { FillType.Gradient },
+            Gradient = new FillGradient
+            {
+                ShadeIntensity = 1,
+                OpacityFrom = 0.7,
+                OpacityTo = 0.1
+            }
+        },
+        Stroke = new Stroke { Width = 2 },
+        Xaxis = new XAxis { Type = XAxisType.Category, Floating = true },
+        Yaxis =
+        [
+            new YAxis
+            {
+                Title = new AxisTitle { Text = "Response Time (ms)" },
+                Min = 0,
+                DecimalsInFloat = 0
+            }
+        ],
+        Tooltip = new Tooltip { Shared = true }
+    };
+
+    private ResponseTimeDataPoint MapToResponseTimePoint(ChartData data) => new()
+    {
+        Time = data.Time,
+        ResponseTime = data.Value,
+        Service = data.Label
+    };
+}

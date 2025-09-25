@@ -15,5 +15,9 @@ spec:
     - name: cluster-gateway
       port: 8001
       targetPort: 0
+    - name: dashboard
+      port: 8080
+      targetPort: 8080
   type: ClusterIP
+  clusterIP: None
   

@@ -8,16 +8,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Client", "Hea
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Model", "HealthMonitor.Model\HealthMonitor.Model.csproj", "{77835CF8-6EDA-4390-BF9E-328977B7F5F4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Cluster", "HealthMonitor.Cluster\HealthMonitor.Cluster.csproj", "{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Grains.Abstraction", "HealthMonitor.Grains.Abstraction\HealthMonitor.Grains.Abstraction.csproj", "{4B1C8A25-C8C7-4528-A324-5ED3ECD7F786}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Cluster.Dashboard", "HealthMonitor.Cluster.Dashboard\HealthMonitor.Cluster.Dashboard.csproj", "{7F4F3F7A-384F-47B2-B2E3-66C3D2046B5C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HealthMonitor.Cluster", "HealthMonitor.Cluster\HealthMonitor.Cluster.csproj", "{7F4F3F7A-384F-47B2-B2E3-66C3D2046B5C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docker Resource", "Docker Resource", "{DB62F9F3-CA3B-4C94-95EC-FA4D7D8FF29D}"
 	ProjectSection(SolutionItems) = preProject
 		dockerfile-cluster = dockerfile-cluster
-		dockerfile-cluster-dashboard = dockerfile-cluster-dashboard
 		dockerfile-server = dockerfile-server
 	EndProjectSection
 EndProject
@@ -79,18 +76,6 @@ Global
 		{77835CF8-6EDA-4390-BF9E-328977B7F5F4}.Release|x64.Build.0 = Release|Any CPU
 		{77835CF8-6EDA-4390-BF9E-328977B7F5F4}.Release|x86.ActiveCfg = Release|Any CPU
 		{77835CF8-6EDA-4390-BF9E-328977B7F5F4}.Release|x86.Build.0 = Release|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Debug|x64.Build.0 = Debug|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Debug|x86.Build.0 = Debug|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Release|x64.ActiveCfg = Release|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Release|x64.Build.0 = Release|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Release|x86.ActiveCfg = Release|Any CPU
-		{ADFFE21F-6924-42B5-B631-8C51FBE2BB6B}.Release|x86.Build.0 = Release|Any CPU
 		{4B1C8A25-C8C7-4528-A324-5ED3ECD7F786}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4B1C8A25-C8C7-4528-A324-5ED3ECD7F786}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4B1C8A25-C8C7-4528-A324-5ED3ECD7F786}.Debug|x64.ActiveCfg = Debug|Any CPU

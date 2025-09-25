@@ -1,6 +1,5 @@
 images:
   healthmonitorcluster: localhost:5001/health-monitor-cluster
-  healthmonitorclusterdashboard: localhost:5001/health-monitor-cluster-dashboard
   healthmonitor: localhost:5001/health-monitor
   
 cluster:

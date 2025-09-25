@@ -12,7 +12,6 @@ data:
   Orleans__ClusterId: "w33CjzD5zSxcKew7HPQqW9BlA"
   Orleans__ServiceId: "NJ!1yoETb35eSn4BpbJFGT4bu"
   Orleans__EnableDistributedTracing: "true"
-  HTTP_PORTS: "8080"
   {{- range $key, $value := .Values.server.config }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}

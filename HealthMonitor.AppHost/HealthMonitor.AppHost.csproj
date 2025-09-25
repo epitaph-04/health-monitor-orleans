@@ -18,9 +18,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\HealthMonitor.Cluster\HealthMonitor.Cluster.csproj" />
-        <ProjectReference Include="..\HealthMonitor.Cluster.Dashboard\HealthMonitor.Cluster.Dashboard.csproj" />
         <ProjectReference Include="..\HealthMonitor\HealthMonitor.csproj" />
+        <ProjectReference Include="..\HealthMonitor.Cluster\HealthMonitor.Cluster.csproj" />
     </ItemGroup>
 
 </Project>

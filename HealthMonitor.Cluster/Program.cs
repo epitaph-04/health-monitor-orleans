@@ -1,11 +1,10 @@
-﻿using HealthMonitor.Cluster;
+using HealthMonitor.Cluster;
 using HealthMonitor.Cluster.Grains;
 using HealthMonitor.Cluster.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using HealthMonitor.Grains.Abstraction;
 using Orleans.Configuration;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 builder.AddKeyedRedisClient("orleans-redis");
 builder.UseOrleans(siloBuilder => siloBuilder
     .Configure<GrainCollectionOptions>(o => o.CollectionQuantum = TimeSpan.FromSeconds(30))
@@ -14,10 +13,18 @@ builder.UseOrleans(siloBuilder => siloBuilder
     {
         o.RebalancerDueTime = TimeSpan.FromSeconds(5);
         o.SessionCyclePeriod = TimeSpan.FromSeconds(5);
-    }));
+    })
+    //.UseDashboard()
+);
+//builder.Services.AddServicesForSelfHostedDashboard();
+//builder.Services.AddDashboard();
 
+builder.Services.Configure<HealthTrendsOptions>(builder.Configuration.GetSection("HealthTrends"));
 builder.Services.AddHttpClient<HttpHealthCheckGrain>();
 builder.Services.AddTransient<HealthTrendCalculator>();
 builder.Services.AddHostedService<GrainInitializerService>();
+
 var app = builder.Build();
-await app.RunAsync();
+//app.UseOrleansDashboard();
+app.MapHealthChecks("/health");
+app.Run();

@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="Aspire.StackExchange.Redis" Version="9.4.2" />
+        <PackageReference Include="Blazor-ApexCharts" Version="6.0.2" />
         <PackageReference Include="Microsoft.Orleans.Client" Version="9.2.1" />
         <PackageReference Include="Microsoft.Orleans.Clustering.Redis" Version="9.2.1" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0-rc.1.25451.107"/>

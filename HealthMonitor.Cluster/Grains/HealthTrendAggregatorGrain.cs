@@ -1,7 +1,5 @@
 using HealthMonitor.Grains.Abstraction;
 using HealthMonitor.Model;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
 namespace HealthMonitor.Cluster.Grains;
@@ -15,19 +13,17 @@ public class HealthTrendAggregatorState
 
 [StorageProvider(ProviderName = "Default")]
 public class HealthTrendAggregatorGrain(
-    IConfiguration configuration,
     IClusterClient clusterClient,
     ILogger<HealthTrendAggregatorGrain> logger)
     : Grain<HealthTrendAggregatorState>, IHealthTrendAggregatorGrain, IRemindable
 {
     private const string HealthTrendAggregatorReminder = "HEALTH_TREND_AGGREGATOR_REMINDER";
-    public async ValueTask Initialize(CancellationToken token)
+    public async ValueTask Initialize(HealthTrendsOptions options, CancellationToken token)
     {
-        var interval = configuration.GetValue("HealthTrends:CalculationInterval", TimeSpan.FromHours(1));
         await this.RegisterOrUpdateReminder(
             $"{HealthTrendAggregatorReminder}-{this.GetPrimaryKeyString()}", 
-            interval,
-            interval);
+            TimeSpan.FromSeconds(30),
+            options.CalculationInterval);
     }
 
     public async ValueTask RegisterService(ServiceConfiguration serviceConfiguration, CancellationToken token)
@@ -39,7 +35,6 @@ public class HealthTrendAggregatorGrain(
 
     public async ValueTask<Dictionary<string, HealthTrendData>> GetAllServiceTrends(TimeSpan analysisWindow, CancellationToken token)
     {
-        // This would need to be configured with known service IDs or discovered dynamically
         var trends = new Dictionary<string, HealthTrendData>();
         
         var tasks = State.ServiceIds.Select(async serviceId =>

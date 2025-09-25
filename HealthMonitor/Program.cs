@@ -1,3 +1,4 @@
+using ApexCharts;
 using HealthMonitor.Client.Service;
 using HealthMonitor.Components;
 using HealthMonitor.Hub;
@@ -30,6 +31,7 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 500;
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
+builder.Services.AddApexCharts(e => e.GlobalOptions = new ApexChartBaseOptions { Theme = new Theme { Mode = Mode.Dark } });
 
 builder.Services.AddScoped<IServiceRegistry, ServiceRegistry>();
 builder.Services.AddScoped<IHealthTrendService, HealthTrendService>();

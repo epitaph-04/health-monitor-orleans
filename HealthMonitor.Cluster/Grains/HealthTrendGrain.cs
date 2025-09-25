@@ -1,7 +1,6 @@
 using HealthMonitor.Cluster.Services;
 using HealthMonitor.Grains.Abstraction;
 using HealthMonitor.Model;
-using Microsoft.Extensions.Logging;
 using Orleans.Providers;
 
 namespace HealthMonitor.Cluster.Grains;

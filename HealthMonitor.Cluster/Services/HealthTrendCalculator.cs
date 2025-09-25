@@ -1,5 +1,4 @@
 using HealthMonitor.Model;
-using Microsoft.Extensions.Logging;
 
 namespace HealthMonitor.Cluster.Services;
 
@@ -412,7 +411,7 @@ public class HealthTrendCalculator
 
         // Estimate monthly downtime
         var timeSpan = records.Max(r => r.Timestamp) - records.Min(r => r.Timestamp);
-        var monthlyMultiplier = TimeSpan.FromDays(30).TotalMinutes / timeSpan.TotalMinutes;
+        var monthlyMultiplier = (int)(TimeSpan.FromDays(30).TotalMinutes / timeSpan.TotalMinutes);
         slaMetrics.EstimatedDowntimeThisMonth = TimeSpan.FromMinutes(actualDowntime * monthlyMultiplier);
 
         return slaMetrics;

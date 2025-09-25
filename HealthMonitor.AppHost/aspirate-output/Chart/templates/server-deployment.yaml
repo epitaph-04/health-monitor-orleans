@@ -1,24 +1,24 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: health-monitor-server
   annotations: {}
   labels:
     app: health-monitor-server
 spec:
-  minReadySeconds: 60
+  minReadySeconds: 15
   replicas: 1
+  serviceName: health-monitor-server
   selector:
     matchLabels:
       app: health-monitor-server
-  strategy:
-    type: Recreate
   template:
     metadata:
       annotations: {}
       labels:
         app: health-monitor-server
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: health-monitor-server
           envFrom:
@@ -28,7 +28,31 @@ spec:
                 name: health-monitor-server
           image: '{{ .Values.images.healthmonitor }}'
           imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "100m"
           ports:
             - name: server
               containerPort: 8080
-      terminationGracePeriodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: server
+            failureThreshold: 1
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: server
+            failureThreshold: 1
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /health
+              port: server
+            failureThreshold: 10
+            periodSeconds: 10

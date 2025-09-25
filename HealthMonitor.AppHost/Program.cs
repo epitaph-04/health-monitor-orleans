@@ -2,6 +2,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var redis = builder
     .AddRedis("orleans-redis")
+    .WithDataVolume("orleans")
     .WithRedisInsight();
 
 var orleans = builder
@@ -12,12 +13,6 @@ var orleans = builder
 
 var healthMonitorCluster = builder
     .AddProject<Projects.HealthMonitor_Cluster>("health-monitor-cluster")
-    .WithReference(orleans)
-    .WaitFor(redis)
-    .WithReplicas(1);
-
-builder
-    .AddProject<Projects.HealthMonitor_Cluster_Dashboard>("health-monitor-cluster-dashboard")
     .WithReference(orleans)
     .WaitFor(redis)
     .WithReplicas(1);

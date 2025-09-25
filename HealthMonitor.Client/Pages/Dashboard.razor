@@ -41,7 +41,9 @@
                     
                     <MudButton Variant="Variant.Outlined" 
                               StartIcon="Icons.Material.Filled.Settings"
-                              OnClick="@(() => _settingsDialog = true)">
+                              OnClick="@(() => { _settingsDialog = true;
+                                           StateHasChanged();
+                                       })">
                         Settings
                     </MudButton>
                 </MudStack>
@@ -204,7 +206,7 @@
                         </CardHeaderContent>
                         <CardHeaderActions>
                             <MudMenu Icon="Icons.Material.Filled.MoreVert">
-                                <MudMenuItem OnClick="ExportHealthTrendChart">Export Chart</MudMenuItem>
+                                <MudMenuItem OnClick="@ExportHealthTrendChart">Export Chart</MudMenuItem>
                                 <MudMenuItem OnClick="@(() => _showHealthTrendFullscreen = true)">Fullscreen</MudMenuItem>
                             </MudMenu>
                         </CardHeaderActions>
@@ -323,10 +325,12 @@
 </MudContainer>
 
 <!-- Dialogs -->
-<SettingsDialog RefreshInterval="@_refreshInterval"
+<SettingsDialog IsOpen="_settingsDialog"
+                RefreshInterval="@_refreshInterval"
                 OnRefreshIntervalChanged="@UpdateRefreshInterval" />
 
 <FullscreenChartDialog Title="Health Trends - Fullscreen"
+                       IsOpen="_showHealthTrendFullscreen"
                        ChartData="@_healthTrendChartData" />
 
 @code {
@@ -392,7 +396,7 @@
                 
                 foreach (var trend in trendHistory)
                 {
-                    _healthTrendChartData.Add(new ChartData
+                    _healthTrendChartData.Add(new ()
                     {
                         Time = trend.CalculatedAt,
                         Value = trend.OverallHealthScore,
@@ -524,11 +528,10 @@
     private Color GetRandomServiceColor() => 
         new[] { Color.Primary, Color.Secondary, Color.Tertiary, Color.Info, Color.Success }[Random.Shared.Next(5)];
     
-
     private string GetServiceColor(string serviceId) => 
         serviceId.GetHashCode() % 2 == 0 ? "#2196F3" : "#4CAF50";
 
-    private string GetServiceStatusText(string serviceId) => "Online"; // Simplified
+    private string GetServiceStatusText(string serviceId) => "Online";
 
     private Color GetAlertColor(AlertSeverity severity) => severity switch
     {
@@ -546,7 +549,6 @@
 
     private Task ExportHealthTrendChart()
     {
-        // Implementation for chart export
         Snackbar.Add("Chart export feature would be implemented here", Severity.Info);
         return Task.CompletedTask;
     }
