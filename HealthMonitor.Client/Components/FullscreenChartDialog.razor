@@ -1,5 +1,5 @@
 @using HealthMonitor.Client.Model
-<MudDialog @bind-IsOpen="IsOpen" Options="@_dialogOptions">
+<MudDialog @bind-Visible="@IsOpen" Options="@_dialogOptions">
     <DialogContent>
         <MudStack>
             <MudText Typo="Typo.h5">@Title</MudText>
@@ -10,10 +10,10 @@
     </DialogContent>
     
     <DialogActions>
-        <MudButton StartIcon="Icons.Material.Filled.Download" OnClick="ExportChart">
+        <MudButton StartIcon="Icons.Material.Filled.Download" OnClick="@ExportChart">
             Export
         </MudButton>
-        <MudButton OnClick="Close">Close</MudButton>
+        <MudButton OnClick="@Close">Close</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -23,7 +23,7 @@
     [Parameter] public string Title { get; set; } = "";
     [Parameter] public List<ChartData> ChartData { get; set; } = new();
 
-    private DialogOptions _dialogOptions = new()
+    private readonly DialogOptions _dialogOptions = new()
     {
         MaxWidth = MaxWidth.Large,
         FullWidth = true

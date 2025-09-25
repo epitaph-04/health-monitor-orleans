@@ -1,4 +1,5 @@
 @page "/"
+@using HealthMonitor.Client.Components
 @using HealthMonitor.Client.Model
 @using HealthMonitor.Client.Service
 @using HealthMonitor.Model
@@ -322,13 +323,11 @@
 </MudContainer>
 
 <!-- Dialogs -->
-<SettingsDialog @bind="@_settingsDialog" 
-                RefreshInterval="@_refreshInterval"
+<SettingsDialog RefreshInterval="@_refreshInterval"
                 OnRefreshIntervalChanged="@UpdateRefreshInterval" />
 
-<FullscreenChartDialog @bind="@_showHealthTrendFullscreen" 
-                      Title="Health Trends - Fullscreen"
-                      ChartData="@_healthTrendChartData" />
+<FullscreenChartDialog Title="Health Trends - Fullscreen"
+                       ChartData="@_healthTrendChartData" />
 
 @code {
     private SystemHealthOverview? _systemOverview;

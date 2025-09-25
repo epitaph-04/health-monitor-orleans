@@ -1,6 +1,4 @@
-using ApexCharts;
 using HealthMonitor.Client.Service;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor;
 using MudBlazor.Services;
@@ -19,7 +17,6 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 500;
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
-builder.Services.AddApexCharts();
 // Add dashboard services
 builder.Services.AddScoped<DashboardService>();
 await builder.Build().RunAsync();

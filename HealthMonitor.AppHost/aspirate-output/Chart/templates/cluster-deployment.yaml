@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-monitor-cluster
+  annotations: {}
+  labels:
+    app: health-monitor-cluster
+spec:
+  minReadySeconds: 60
+  replicas: 1
+  selector:
+    matchLabels:
+      app: health-monitor-cluster
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations: {}
+      labels:
+        app: health-monitor-cluster
+    spec:
+      containers:
+        - name: health-monitor-cluster
+          envFrom:
+            - configMapRef:
+                name: health-monitor-cluster
+            - secretRef:
+                name: health-monitor-cluster
+          image: '{{ .Values.images.healthmonitorcluster }}'
+          imagePullPolicy: Always
+          ports:
+            - name: cluster-silo
+              containerPort: 8000
+            - name: cluster-gateway
+              containerPort: 8001
+      terminationGracePeriodSeconds: 30

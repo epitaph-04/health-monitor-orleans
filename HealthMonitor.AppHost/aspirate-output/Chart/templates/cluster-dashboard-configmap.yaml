@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: health-monitor-cluster-dashboard
+  annotations: { }
+  labels:
+    app: health-monitor-cluster-dashboard
+data:
+  ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+  Orleans__Clustering__ProviderType: "Redis"
+  Orleans__Clustering__ServiceKey: "orleans-redis"
+  Orleans__ClusterId: "w33CjzD5zSxcKew7HPQqW9BlA"
+  Orleans__ServiceId: "NJ!1yoETb35eSn4BpbJFGT4bu"
+  Orleans__EnableDistributedTracing: "true"
+  Orleans__Endpoints__SiloPort: "8000"
+  Orleans__Endpoints__GatewayPort: "8001"
+  Orleans__Reminders__ProviderType: "Redis"
+  Orleans__Reminders__ServiceKey: "orleans-redis"
+  Orleans__GrainStorage__Default__ProviderType: "Redis"
+  Orleans__GrainStorage__Default__ServiceKey: "orleans-redis"
+  HTTP_PORTS: "8080"

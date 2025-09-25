@@ -2,8 +2,9 @@ images:
   healthmonitorcluster: localhost:5001/health-monitor-cluster
   healthmonitorclusterdashboard: localhost:5001/health-monitor-cluster-dashboard
   healthmonitor: localhost:5001/health-monitor
-  aspiredashboard: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
   
-appsettings:
-  server: {}
-  cluster: {}
+cluster:
+  config:
+    
+server:
+  config:

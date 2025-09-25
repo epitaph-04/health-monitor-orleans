@@ -1,80 +1,62 @@
-@using ApexCharts
-
 <div style="height: 100%;">
-    <ApexChart TItem="PredictionDataPoint"
-               Title="Health Predictions with Confidence Intervals"
-               Height="350"
-               Options="@_chartOptions">
-
-        @foreach (var serviceGroup in Data.GroupBy(d => d.ServiceId))
-        {
-            <ApexPointSeries TItem="PredictionDataPoint"
-                           Items="@serviceGroup.Select(MapToPredictionPoint).ToList()"
-                           Name="@serviceGroup.Key"
-                           SeriesType="SeriesType.Line"
-                           XValue="@(e => e.Time.ToString("HH:mm"))"
-                           YValue="@(e => (decimal)e.PredictedHealth)" />
-        }
-    </ApexChart>
+    <MudChart 
+        ChartType=ChartType.Line
+        ChartSeries="@_chartSeries" 
+        XAxisLabels="@_xAxisLabels" 
+        Width="100%" 
+        Height="350px" 
+        ChartOptions="@_chartOptions" 
+        AxisChartOptions="_axisChartOptions" />
 </div>
 
 @code {
     [Parameter] public List<PredictionsPanel.PredictionChartData> Data { get; set; } = new();
 
-    private ApexChartOptions<PredictionDataPoint> _chartOptions = new();
-
-    protected override void OnInitialized()
+    private readonly List<ChartSeries> _chartSeries = [];
+    private string[] _xAxisLabels = [];
+    private readonly ChartOptions _chartOptions = new()
     {
-        _chartOptions = new ApexChartOptions<PredictionDataPoint>
+        ShowLegend = false,
+        XAxisLines = true,
+        MaxNumYAxisTicks = 11,
+        YAxisTicks = 10,
+        YAxisFormat = "0'%'",
+        LineStrokeWidth = 2,
+        InterpolationOption = InterpolationOption.NaturalSpline
+    };
+    private readonly AxisChartOptions _axisChartOptions = new () { MatchBoundsToSize = true };
+
+    protected override void OnParametersSet()
+    {
+        if (Data.Any())
         {
-            Theme = new Theme { Mode = Mode.Light },
-            Chart = new Chart
+            SetupChartData();
+        }
+    }
+
+    private void SetupChartData()
+    {
+        var index = 0;
+        foreach (var serviceGroup in Data.GroupBy(d => d.ServiceId))
+        {
+            _chartSeries.Add(new ChartSeries
             {
-                Toolbar = new Toolbar { Show = true },
-                Zoom = new Zoom { Enabled = true }
-            },
-            Stroke = new Stroke
-            {
-                Curve = Curve.Smooth,
-                Width = 3,
-                DashArray = new List<int> { 0, 5 } // Solid and dashed lines
-            },
-            Fill = new Fill
-            {
-                Type = new List<FillType> { FillType.Solid, FillType.Pattern }
-            },
-            Xaxis = new XAxis
-            {
-                Type = XAxisType.Category,
-                Title = new AxisTitle { Text = "Time" }
-            },
-            Yaxis = new List<YAxis>
-            {
-                new YAxis
-                {
-                    Title = new AxisTitle { Text = "Predicted Health Score %" },
-                    Min = 0,
-                    Max = 100
-                }
-            },
-            Legend = new Legend { Position = LegendPosition.Top },
-            Annotations = new Annotations
-            {
-                Yaxis = new List<AnnotationsYAxis>
-                {
-                    new AnnotationsYAxis
-                    {
-                        Y = 95,
-                        BorderColor = "#00E396",
-                        Label = new Label
-                        {
-                            Text = "SLA Threshold",
-                            Style = new Style { Color = "#fff", Background = "#00E396" }
-                        }
-                    }
-                }
-            }
-        };
+                Name = serviceGroup.Key,
+                LineDisplayType = LineDisplayType.Line,
+                Data = serviceGroup.Select(p => p.PredictedHealth).ToArray(),
+                FillOpacity = 0.5,
+                Index = index++
+            });
+        }
+
+        var xAxis = new HashSet<DateTime>(Data.Select(d => d.Time));
+        var labels = new List<string>(); 
+        foreach (var chartAxis in xAxis.OrderBy(d => d))
+        {
+            labels.Add(chartAxis.ToString("HH:mm"));
+        }
+
+        _xAxisLabels = labels.ToArray();
     }
 
     private PredictionDataPoint MapToPredictionPoint(PredictionsPanel.PredictionChartData data) =>

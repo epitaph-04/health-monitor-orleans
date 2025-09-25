@@ -1,34 +1,33 @@
-appsettings:
-  cluster:
-    healthTrends:
-      calculationInterval: "01:00:00"
-      retentionPeriod: "90.00:00:00"
-      slaTargets:
-        availabilityPercentage: 99.9
-        responseTimeSeconds: 1.0
-  #server:
-  #  healthCheckConfiguration:
-  #    - id: cf-backend
-  #      name: CF Backend
-  #      type: Http
-  #      target: http://campaign-workflow-backend/campaign-workflow/v1/health/liveness
-  #      expectedResponseCode: 200
-  #      method: GET
-  #      timeoutSeconds: 10
-  #      intervalMinutes: 1
-  #    - id: audit-logger
-  #      name: Audit Logger
-  #      type: Http
-  #      target: http://audit-logger/health/liveness
-  #      expectedResponseCode: 200
-  #      method: GET
-  #      timeoutSeconds: 10
-  #      intervalMinutes: 1
-  #    - id: maf-notifier
-  #      name: MAF Notifier
-  #      type: Http
-  #      target: http://maf-notifier/health/liveness
-  #      expectedResponseCode: 200
-  #      method: GET
-  #      timeoutSeconds: 10
-  #      intervalMinutes: 1
+cluster:
+  config:
+    healthTrends__calculationInterval: "01:00:00"
+    healthTrends__retentionPeriod: "90.00:00:00"
+    healthTrends__slaTargets__availabilityPercentage: 99.9
+    healthTrends__slaTargets__responseTimeSeconds: 1.0
+
+server:
+  config:
+    healthCheckConfiguration__0__id: cf-backend
+    healthCheckConfiguration__0__name: CF Backend
+    healthCheckConfiguration__0__type: "Http"
+    healthCheckConfiguration__0__target: "https://google.com"
+    healthCheckConfiguration__0__expectedResponseCode: "200"
+    healthCheckConfiguration__0__method: "GET"
+    healthCheckConfiguration__0__timeoutSeconds: "10"
+    healthCheckConfiguration__0__intervalMinutes: "1"
+    healthCheckConfiguration__1__id: audit-logger
+    healthCheckConfiguration__1__name: Audit Logger
+    healthCheckConfiguration__1__type: "Http"
+    healthCheckConfiguration__1__target: "https://ziglang.org/"
+    healthCheckConfiguration__1__expectedResponseCode: "200"
+    healthCheckConfiguration__1__method: "GET"
+    healthCheckConfiguration__1__timeoutSeconds: "10"
+    healthCheckConfiguration__1__intervalMinutes: "1"
+    healthCheckConfiguration__2__id: maf-notifier
+    healthCheckConfiguration__2__name: MAF Notifier
+    healthCheckConfiguration__2__type: "Http"
+    healthCheckConfiguration__2__target: "https://www.rust-lang.org/"
+    healthCheckConfiguration__2__expectedResponseCode: "200"
+    healthCheckConfiguration__2__method: "GET"
+    healthCheckConfiguration__2__timeoutSeconds: "10"
+    healthCheckConfiguration__2__intervalMinutes: "1"

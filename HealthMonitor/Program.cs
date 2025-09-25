@@ -1,4 +1,3 @@
-using ApexCharts;
 using HealthMonitor.Client.Service;
 using HealthMonitor.Components;
 using HealthMonitor.Hub;
@@ -31,11 +30,11 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 500;
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
-builder.Services.AddApexCharts();
 
 builder.Services.AddScoped<IServiceRegistry, ServiceRegistry>();
 builder.Services.AddScoped<IHealthTrendService, HealthTrendService>();
 builder.Services.AddHostedService<GrainInitializerBackgroundService>();
+builder.Services.AddHttpClient<DashboardService>();
 builder.Services.AddScoped<DashboardService>();
 
 var app = builder.Build();
@@ -104,5 +103,4 @@ healthTrendApi.MapPost("/refresh",
         return TypedResults.Ok(new { message = "Trend refresh initiated" });
     });
 
-//app.Map("/orleans-dashboard", x => x.UseOrleansDashboard());
 app.Run();

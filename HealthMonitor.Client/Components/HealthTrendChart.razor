@@ -1,68 +1,64 @@
-@using ApexCharts
 @using HealthMonitor.Client.Model
 
 <div style="height: @(Height)px;">
-    <ApexChart TItem="ResponseTimeDataPoint"
-               Title="Health Score Over Time"
-               Height="@Height"
-               Options="@_chartOptions">
-
-        @foreach (var serviceGroup in Data.GroupBy(d => d.Label))
-        {
-            <ApexPointSeries TItem="ResponseTimeDataPoint"
-                             Items="@serviceGroup.Select(MapToResponseTimePoint).ToList()"
-                             Name="@serviceGroup.Key"
-                             SeriesType="SeriesType.Area"
-                             XValue="@(e => e.Time.ToString("HH:mm"))"
-                             YValue="@(e => (decimal)e.ResponseTime)"/>
-        }
-    </ApexChart>
+    <MudChart 
+        ChartType=ChartType.Line
+        ChartSeries="@_chartSeries" 
+        XAxisLabels="@_xAxisLabels" 
+        Width="100%" 
+        Height="@($"{Height}px")" 
+        ChartOptions="@_chartOptions" 
+        AxisChartOptions="_axisChartOptions" />
 </div>
 
 @code {
     [Parameter] public List<ChartData> Data { get; set; } = new();
     [Parameter] public int Height { get; set; } = 200;
     
-    private ApexChartOptions<ResponseTimeDataPoint> _chartOptions = new();
-
-    protected override void OnInitialized()
+    private readonly List<ChartSeries> _chartSeries = [];
+    private string[] _xAxisLabels = [];
+    private readonly ChartOptions _chartOptions = new()
     {
-        _chartOptions = new ApexChartOptions<ResponseTimeDataPoint>
+        ShowLegend = false,
+        XAxisLines = true,
+        MaxNumYAxisTicks = 11,
+        YAxisTicks = 10,
+        YAxisFormat = "0'%'",
+        LineStrokeWidth = 2,
+        //InterpolationOption = InterpolationOption.NaturalSpline
+    };
+    private readonly AxisChartOptions _axisChartOptions = new () { MatchBoundsToSize = true };
+
+    protected override void OnParametersSet()
+    {
+        if (Data.Any())
         {
-            Theme = new Theme { Mode = Mode.Light },
-            Chart = new Chart
-            {
-                Toolbar = new Toolbar { Show = true },
-                Zoom = new Zoom { Enabled = true }
-            },
-            Fill = new Fill
-            {
-                Type = new List<FillType> { FillType.Gradient },
-                Gradient = new FillGradient
-                {
-                    ShadeIntensity = 1,
-                    OpacityFrom = 0.7,
-                    OpacityTo = 0.1
-                }
-            },
-            Stroke = new Stroke { Width = 2 },
-            Xaxis = new XAxis { Type = XAxisType.Category },
-            Yaxis = new List<YAxis>
-            {
-                new YAxis
-                {
-                    Title = new AxisTitle { Text = "Response Time (ms)" },
-                    Min = 0
-                }
-            },
-            Tooltip = new Tooltip { Shared = true }
-        };
+            SetupChartData();
+        }
     }
 
-    private ResponseTimeDataPoint MapToResponseTimePoint(ChartData data) => new ResponseTimeDataPoint
+    private void SetupChartData()
     {
-        Time = data.Time,
-        ResponseTime = data.Value,
-        Service = data.Label
-    };
+        var index = 0;
+        foreach (var serviceGroup in Data.GroupBy(d => d.Label))
+        {
+            _chartSeries.Add(new ChartSeries
+            {
+                Name = serviceGroup.Key,
+                LineDisplayType = LineDisplayType.Area,
+                Data = serviceGroup.Select(p => p.Value).ToArray(),
+                FillOpacity = 0.5,
+                Index = index++
+            });
+        }
+
+        var xAxis = new HashSet<DateTime>(Data.Select(d => d.Time));
+        var labels = new List<string>(); 
+        foreach (var chartAxis in xAxis.OrderBy(d => d))
+        {
+            labels.Add(chartAxis.ToString("HH:mm"));
+        }
+
+        _xAxisLabels = labels.ToArray();
+    }
 }
