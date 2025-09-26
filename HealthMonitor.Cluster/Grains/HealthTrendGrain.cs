@@ -84,7 +84,8 @@ public class HealthTrendGrain(
 
     public ValueTask<List<HealthTrendData>> GetTrendHistory(int count, CancellationToken token)
     {
-        var history = State.TrendHistory
+        var history = State
+            .TrendHistory
             .OrderByDescending(t => t.CalculatedAt)
             .Take(count)
             .ToList();

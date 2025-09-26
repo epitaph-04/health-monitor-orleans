@@ -40,7 +40,12 @@
                 OpacityTo = 0.1
             }
         },
-        Stroke = new Stroke { Width = 2 },
+        Stroke = new Stroke { 
+            Curve = Curve.Smooth,
+            Width = 3,
+            DashArray = new List<int> { 0, 5 } 
+        },
+        Legend = new Legend { Position = LegendPosition.Top },
         Xaxis = new XAxis { Type = XAxisType.Category, Floating = true },
         Yaxis =
         [

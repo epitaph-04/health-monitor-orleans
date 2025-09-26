@@ -35,6 +35,7 @@ public class HealthTrendAggregatorGrain(
 
     public async ValueTask<Dictionary<string, HealthTrendData>> GetAllServiceTrends(TimeSpan analysisWindow, CancellationToken token)
     {
+        // This would need to be configured with known service IDs or discovered dynamically
         var trends = new Dictionary<string, HealthTrendData>();
         
         var tasks = State.ServiceIds.Select(async serviceId =>
