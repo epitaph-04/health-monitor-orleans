@@ -1,9 +1,38 @@
 ﻿<div class="d-flex flex-row">
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard" Rounded="true" >
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard" Rounded="true">
         <MudText Class="d-none d-sm-inline-block">Dashboard</MudText>
     </MudNavLink>
-    
-    <MudNavLink Href="analytics" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Analytics" Rounded="true">
-        <MudText Class="d-none d-sm-inline-block">Analytics</MudText>
-    </MudNavLink>
+
+    <MudMenu Icon="@Icons.Material.Filled.Analytics"
+             Color="Color.Inherit"
+             Direction="Origin.BottomLeft"
+             OffsetY="true">
+        <ActivatorContent>
+            <MudButton StartIcon="@Icons.Material.Filled.Analytics"
+                      Color="Color.Inherit"
+                      Variant="Variant.Text"
+                      Class="rounded-pill">
+                <MudText Class="d-none d-sm-inline-block">Analytics</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Class="ml-1" />
+            </MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            <MudMenuItem Href="/analytics" Icon="@Icons.Material.Filled.Analytics">
+                Analytics Overview
+            </MudMenuItem>
+            <MudDivider />
+            <MudMenuItem Href="/analytics/trends" Icon="@Icons.Material.Filled.TrendingUp">
+                Trends Analysis
+            </MudMenuItem>
+            <MudMenuItem Href="/analytics/insights" Icon="@Icons.Material.Filled.Psychology">
+                Advanced Insights
+            </MudMenuItem>
+            <MudMenuItem Href="/analytics/sla" Icon="@Icons.Material.Filled.Assignment">
+                SLA Compliance
+            </MudMenuItem>
+            <MudMenuItem Href="/analytics/services" Icon="@Icons.Material.Filled.Hub">
+                Service Deep-Dive
+            </MudMenuItem>
+        </ChildContent>
+    </MudMenu>
 </div>

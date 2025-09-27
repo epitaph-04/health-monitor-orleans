@@ -1,9 +1,9 @@
 @using ApexCharts
 
-<div style="height: 100%;">
+<div style="height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
     <ApexChart TItem="PredictionDataPoint"
-               Title="Health Predictions with Confidence Intervals"
-               Height="350"
+               Title=""
+               Height="334"
                Options="@_chartOptions">
 
         @foreach (var serviceGroup in Data.GroupBy(d => d.ServiceId))
@@ -26,34 +26,66 @@
         Chart = new Chart
         {
             Toolbar = new Toolbar { Show = true },
-            Zoom = new Zoom { Enabled = true }
+            Zoom = new Zoom { Enabled = true },
+            Background = "transparent",
+            ForeColor = "#ffffff"
         },
+        Colors = new List<string> { "#8B5CF6", "#06D6A0", "#F72585", "#4895EF", "#FFB700", "#FF6B6B" },
         Stroke = new Stroke
         {
             Curve = Curve.Smooth,
-            Width = 3,
-            DashArray = new List<int> { 0, 5 }
+            Width = 4,
+            DashArray = new List<int> { 0, 8, 0 }
         },
         Fill = new Fill
         {
-            Type = new List<FillType> { FillType.Solid, FillType.Pattern }
+            Type = new List<FillType> { FillType.Gradient },
+            Gradient = new FillGradient
+            {
+                Shade = GradientShade.Dark,
+                Type = GradientType.Vertical,
+                ShadeIntensity = 0.4,
+                OpacityFrom = 0.7,
+                OpacityTo = 0.2
+            }
         },
         Xaxis = new XAxis
         {
             Type = XAxisType.Category,
-            Title = new AxisTitle { Text = "Time" }
+            Title = new AxisTitle { Text = "Prediction Timeline" }
         },
         Yaxis =
         [
             new YAxis
             {
-                Title = new AxisTitle { Text = "Predicted Health Score %" },
+                Title = new AxisTitle { Text = "Predicted Health Score (%)" },
                 Min = 0,
                 Max = 100,
-                DecimalsInFloat = 2
+                TickAmount = 10,
+                ForceNiceScale = true,
+                DecimalsInFloat = 1
             }
         ],
-        Legend = new Legend { Position = LegendPosition.Top },
+        Legend = new Legend
+        {
+            Position = LegendPosition.Top,
+            FontSize = "14px"
+        },
+        Tooltip = new Tooltip
+        {
+            Enabled = true,
+            Shared = true
+        },
+        Markers = new Markers
+        {
+            Size = 6,
+            StrokeColors = "#fff",
+            StrokeWidth = 3,
+            Hover = new MarkersHover
+            {
+                Size = 10
+            }
+        },
         Annotations = new Annotations
         {
             Yaxis =
@@ -61,17 +93,64 @@
                 new AnnotationsYAxis
                 {
                     Y = 95,
+                    Y2 = 100,
                     BorderColor = "#00E396",
+                    FillColor = "#00E396",
+                    Opacity = 0.15,
                     Label = new Label
                     {
-                        Text = "SLA Threshold",
-                        Style = new Style { Color = "#fff", Background = "#00E396" }
+                        Text = "✨ Optimal Performance Zone",
+                        Style = new Style
+                        {
+                            Color = "#fff",
+                            Background = "#00E396",
+                            FontSize = "12px"
+                        },
+                        Position = LabelPosition.Right
+                    }
+                },
+                new AnnotationsYAxis
+                {
+                    Y = 75,
+                    Y2 = 95,
+                    BorderColor = "#FEB019",
+                    FillColor = "#FEB019",
+                    Opacity = 0.1,
+                    Label = new Label
+                    {
+                        Text = "⚠ Monitor Closely",
+                        Style = new Style
+                        {
+                            Color = "#fff",
+                            Background = "#FEB019",
+                            FontSize = "12px"
+                        },
+                        Position = LabelPosition.Right
+                    }
+                },
+                new AnnotationsYAxis
+                {
+                    Y = 0,
+                    Y2 = 75,
+                    BorderColor = "#FF4560",
+                    FillColor = "#FF4560",
+                    Opacity = 0.1,
+                    Label = new Label
+                    {
+                        Text = "🚨 Action Required",
+                        Style = new Style
+                        {
+                            Color = "#fff",
+                            Background = "#FF4560",
+                            FontSize = "12px"
+                        },
+                        Position = LabelPosition.Right
                     }
                 }
             ]
         }
     };
-    
+
     private PredictionDataPoint MapToPredictionPoint(PredictionsPanel.PredictionChartData data) =>
         new ()
         {

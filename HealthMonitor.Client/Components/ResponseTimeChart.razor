@@ -1,10 +1,10 @@
 @using ApexCharts
 @using HealthMonitor.Client.Model
 
-<div style="height: @(Height)px;">
+<div style="height: @(Height)px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
     <ApexChart TItem="ResponseTimeDataPoint"
-               Title="Response time Over Time"
-               Height="@Height"
+               Title=""
+               Height="@(Height - 16)"
                Options="@_chartOptions">
 
         @foreach (var serviceGroup in Data.GroupBy(d => d.Label))
@@ -21,42 +21,71 @@
 
 @code {
     [Parameter] public List<ChartData> Data { get; set; } = new();
-    [Parameter] public int Height { get; set; } = 200;
-    
+    [Parameter] public int Height { get; set; } = 350;
+
     private readonly ApexChartOptions<ResponseTimeDataPoint> _chartOptions = new()
     {
         Chart = new Chart
         {
             Toolbar = new Toolbar { Show = true },
-            Zoom = new Zoom { Enabled = true }
+            Zoom = new Zoom { Enabled = true },
+            Background = "transparent",
+            ForeColor = "#ffffff"
         },
+        Colors = new List<string> { "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F" },
         Fill = new Fill
         {
             Type = new List<FillType> { FillType.Gradient },
             Gradient = new FillGradient
             {
-                ShadeIntensity = 1,
-                OpacityFrom = 0.7,
+                Shade = GradientShade.Dark,
+                Type = GradientType.Vertical,
+                ShadeIntensity = 0.5,
+                OpacityFrom = 0.9,
                 OpacityTo = 0.1
             }
         },
-        Stroke = new Stroke { 
+        Stroke = new Stroke
+        {
             Curve = Curve.Smooth,
-            Width = 3,
-            DashArray = new List<int> { 0, 5 } 
+            Width = 4
         },
-        Legend = new Legend { Position = LegendPosition.Top },
-        Xaxis = new XAxis { Type = XAxisType.Category, Floating = true },
+        Legend = new Legend
+        {
+            Position = LegendPosition.Top,
+            FontSize = "14px"
+        },
+        Xaxis = new XAxis
+        {
+            Type = XAxisType.Category,
+            Title = new AxisTitle { Text = "Time" }
+        },
         Yaxis =
         [
             new YAxis
             {
                 Title = new AxisTitle { Text = "Response Time (ms)" },
                 Min = 0,
+                TickAmount = 8,
+                ForceNiceScale = true,
                 DecimalsInFloat = 0
             }
         ],
-        Tooltip = new Tooltip { Shared = true }
+        Tooltip = new Tooltip
+        {
+            Enabled = true,
+            Shared = true
+        },
+        Markers = new Markers
+        {
+            Size = 5,
+            StrokeColors = "#fff",
+            StrokeWidth = 2,
+            Hover = new MarkersHover
+            {
+                Size = 8
+            }
+        }
     };
 
     private ResponseTimeDataPoint MapToResponseTimePoint(ChartData data) => new()

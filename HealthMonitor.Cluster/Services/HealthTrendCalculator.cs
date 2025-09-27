@@ -5,9 +5,10 @@ namespace HealthMonitor.Cluster.Services;
 public class HealthTrendCalculator
 {
     public ValueTask<HealthTrendData> CalculateTrend(
-        string serviceId, 
-        List<HealthCheckRecord> records, 
-        TimeSpan analysisWindow)
+        string serviceId,
+        List<HealthCheckRecord> records,
+        TimeSpan analysisWindow,
+        List<HealthTrendData>? trendHistory = null)
     {
         if (!records.Any())
         {
@@ -35,10 +36,10 @@ public class HealthTrendCalculator
         trendData.DailyBreakdown = CalculateDailyBreakdown(records);
         trendData.WeeklyBreakdown = CalculateWeeklyBreakdown(records);
         
-        // Calculate trends
-        trendData.HealthTrend = CalculateHealthTrend(records);
-        trendData.ResponseTimeTrend = CalculateResponseTimeTrend(records);
-        trendData.TrendConfidence = CalculateTrendConfidence(records);
+        // Calculate trends with improved algorithms using trend history
+        trendData.HealthTrend = CalculateHealthTrend(records, trendHistory);
+        trendData.ResponseTimeTrend = CalculateResponseTimeTrend(records, trendHistory);
+        trendData.TrendConfidence = CalculateTrendConfidence(records, trendHistory);
         
         // Detect anomalies
         trendData.DetectedAnomalies = DetectAnomalies(records);
@@ -46,8 +47,8 @@ public class HealthTrendCalculator
         // Calculate SLA metrics
         trendData.SlaMetrics = CalculateSlaMetrics(records);
         
-        // Generate predictions
-        trendData.Predictions = GeneratePredictions(records);
+        // Generate predictions using trend history for better accuracy
+        trendData.Predictions = GeneratePredictions(records, trendHistory);
 
         return ValueTask.FromResult(trendData);
     }
@@ -169,17 +170,53 @@ public class HealthTrendCalculator
         return date.AddDays(-1 * diff).Date;
     }
 
-    private HealthTrendDirection CalculateHealthTrend(List<HealthCheckRecord> records)
+    private HealthTrendDirection CalculateHealthTrend(List<HealthCheckRecord> records, List<HealthTrendData>? trendHistory = null)
     {
         if (records.Count < 10) return HealthTrendDirection.Unknown;
 
+        // Use trend history for better trend analysis if available
+        if (trendHistory?.Count >= 5)
+        {
+            return CalculateTrendFromHistory(trendHistory);
+        }
+
+        // Fallback to current records analysis
+        return CalculateTrendFromRecords(records);
+    }
+
+    private HealthTrendDirection CalculateTrendFromHistory(List<HealthTrendData> trendHistory)
+    {
+        // Use the last 10 trend calculations for more stable trend detection
+        var recentTrends = trendHistory
+            .OrderByDescending(t => t.CalculatedAt)
+            .Take(10)
+            .OrderBy(t => t.CalculatedAt)
+            .ToList();
+
+        if (recentTrends.Count < 3) return HealthTrendDirection.Unknown;
+
+        var healthScores = recentTrends.Select(t => t.OverallHealthScore).ToList();
+        var trend = CalculateLinearTrend(healthScores);
+        var variance = CalculateVariance(healthScores);
+
+        // More nuanced thresholds based on historical data
+        if (variance > 200) return HealthTrendDirection.Volatile;
+        if (Math.Abs(trend) < 0.5) return HealthTrendDirection.Stable;
+        if (trend > 2.0) return HealthTrendDirection.Improving;
+        if (trend < -2.0) return HealthTrendDirection.Declining;
+
+        return trend > 0 ? HealthTrendDirection.Improving : HealthTrendDirection.Declining;
+    }
+
+    private HealthTrendDirection CalculateTrendFromRecords(List<HealthCheckRecord> records)
+    {
         // Split records into time segments and compare
         var totalTime = records.Max(r => r.Timestamp) - records.Min(r => r.Timestamp);
         var segmentDuration = TimeSpan.FromTicks(totalTime.Ticks / 4); // 4 segments
-        
+
         var segments = new List<List<HealthCheckRecord>>();
         var startTime = records.Min(r => r.Timestamp);
-        
+
         for (int i = 0; i < 4; i++)
         {
             var segmentStart = startTime.Add(TimeSpan.FromTicks(segmentDuration.Ticks * i));
@@ -189,23 +226,41 @@ public class HealthTrendCalculator
         }
 
         var healthScores = segments.Select(s => s.Any() ? CalculateHealthScore(s) : 0).ToList();
-        
+
         // Calculate trend using linear regression
         var trend = CalculateLinearTrend(healthScores);
-        
+
         if (Math.Abs(trend) < 1.0) return HealthTrendDirection.Stable;
         if (trend > 5.0) return HealthTrendDirection.Improving;
         if (trend < -5.0) return HealthTrendDirection.Declining;
-        
+
         // Check for volatility
         var variance = CalculateVariance(healthScores);
         if (variance > 100) return HealthTrendDirection.Volatile;
-        
+
         return trend > 0 ? HealthTrendDirection.Improving : HealthTrendDirection.Declining;
     }
 
-    private HealthTrendDirection CalculateResponseTimeTrend(List<HealthCheckRecord> records)
+    private HealthTrendDirection CalculateResponseTimeTrend(List<HealthCheckRecord> records, List<HealthTrendData>? trendHistory = null)
     {
+        // Use trend history for better response time trend analysis if available
+        if (trendHistory?.Count >= 5)
+        {
+            var recentTrends = trendHistory
+                .OrderByDescending(t => t.CalculatedAt)
+                .Take(8)
+                .OrderBy(t => t.CalculatedAt)
+                .ToList();
+
+            var avgResponseTimes = recentTrends.Select(t => t.AverageResponseTime.TotalMilliseconds).ToList();
+            var responseTrend = CalculateLinearTrend(avgResponseTimes);
+
+            if (Math.Abs(responseTrend) < 5) return HealthTrendDirection.Stable;
+            // Negative trend means improving (decreasing response times)
+            return responseTrend < 0 ? HealthTrendDirection.Improving : HealthTrendDirection.Declining;
+        }
+
+        // Fallback to current records
         var responseTimes = records.Where(r => r.ResponseTime > TimeSpan.Zero)
             .Select(r => r.ResponseTime.TotalMilliseconds)
             .ToList();
@@ -214,9 +269,9 @@ public class HealthTrendCalculator
 
         // Calculate trend in response times over time
         var trend = CalculateLinearTrend(responseTimes);
-        
+
         if (Math.Abs(trend) < 10) return HealthTrendDirection.Stable;
-        
+
         // Negative trend means improving (decreasing response times)
         return trend < 0 ? HealthTrendDirection.Improving : HealthTrendDirection.Declining;
     }
@@ -252,19 +307,47 @@ public class HealthTrendCalculator
         return variance;
     }
 
-    private double CalculateTrendConfidence(List<HealthCheckRecord> records)
+    private double CalculateTrendConfidence(List<HealthCheckRecord> records, List<HealthTrendData>? trendHistory = null)
     {
         if (records.Count < 50) return Math.Min(records.Count / 50.0, 1.0);
-        
-        // Higher confidence with more data points and consistent patterns
+
+        // Base confidence from current data
         var dataPointsFactor = Math.Min(records.Count / 1000.0, 1.0);
-        
-        // Calculate consistency of the data
+
+        // Calculate consistency of the current data
         var hourlyBreakdown = CalculateHourlyBreakdown(records);
         var healthScoreVariance = CalculateVariance(hourlyBreakdown.Select(h => h.HealthScore).ToList());
         var consistencyFactor = Math.Max(0, 1.0 - healthScoreVariance / 100.0);
-        
-        return (dataPointsFactor + consistencyFactor) / 2.0;
+
+        var baseConfidence = (dataPointsFactor + consistencyFactor) / 2.0;
+
+        // Enhance confidence with trend history if available
+        if (trendHistory?.Count >= 10)
+        {
+            var historyConfidenceFactor = CalculateHistoryConfidenceFactor(trendHistory);
+            return (baseConfidence + historyConfidenceFactor) / 2.0;
+        }
+
+        return baseConfidence;
+    }
+
+    private double CalculateHistoryConfidenceFactor(List<HealthTrendData> trendHistory)
+    {
+        // More trend history = higher confidence in predictions
+        var historyLengthFactor = Math.Min(trendHistory.Count / 50.0, 1.0);
+
+        // Consistent trend direction = higher confidence
+        var recentTrends = trendHistory.TakeLast(10).ToList();
+        var trendDirections = recentTrends.Select(t => t.HealthTrend).ToList();
+        var mostCommonTrend = trendDirections.GroupBy(t => t).OrderByDescending(g => g.Count()).First();
+        var trendConsistency = mostCommonTrend.Count() / (double)trendDirections.Count;
+
+        // Lower variance in historical confidence = higher overall confidence
+        var historicalConfidences = recentTrends.Select(t => t.TrendConfidence).ToList();
+        var confidenceVariance = CalculateVariance(historicalConfidences);
+        var confidenceStability = Math.Max(0, 1.0 - confidenceVariance);
+
+        return (historyLengthFactor + trendConsistency + confidenceStability) / 3.0;
     }
 
     private List<HealthAnomaly> DetectAnomalies(List<HealthCheckRecord> records)
@@ -417,21 +500,82 @@ public class HealthTrendCalculator
         return slaMetrics;
     }
 
-    private List<HealthPrediction> GeneratePredictions(List<HealthCheckRecord> records)
+    private List<HealthPrediction> GeneratePredictions(List<HealthCheckRecord> records, List<HealthTrendData>? trendHistory = null)
     {
         var predictions = new List<HealthPrediction>();
-        
+
         if (records.Count < 100) return predictions; // Need sufficient data for predictions
+
+        // Use trend history for more sophisticated predictions if available
+        if (trendHistory?.Count >= 10)
+        {
+            return GeneratePredictionsFromHistory(trendHistory, records);
+        }
+
+        // Fallback to simple trend-based predictions
+        return GenerateSimplePredictions(records);
+    }
+
+    private List<HealthPrediction> GeneratePredictionsFromHistory(List<HealthTrendData> trendHistory, List<HealthCheckRecord> currentRecords)
+    {
+        var predictions = new List<HealthPrediction>();
+        var recentTrends = trendHistory.OrderByDescending(t => t.CalculatedAt).Take(15).OrderBy(t => t.CalculatedAt).ToList();
+
+        // Calculate multiple trend patterns
+        var healthScores = recentTrends.Select(t => t.OverallHealthScore).ToList();
+        var shortTermTrend = CalculateLinearTrend(healthScores.TakeLast(5).ToList());
+        var longTermTrend = CalculateLinearTrend(healthScores);
+
+        var currentHealth = CalculateHealthScore(currentRecords.TakeLast(60).ToList());
+
+        // Detect cyclical patterns (daily, weekly)
+        var cyclicalFactor = DetectCyclicalPatterns(recentTrends);
+
+        for (int hours = 1; hours <= 24; hours++)
+        {
+            // Weighted combination of short-term and long-term trends
+            var trendWeight = Math.Exp(-hours / 12.0); // Decay weight over time
+            var combinedTrend = (shortTermTrend * trendWeight) + (longTermTrend * (1 - trendWeight));
+
+            // Apply cyclical adjustment
+            var cyclicalAdjustment = cyclicalFactor * Math.Sin(2 * Math.PI * hours / 24.0) * 2; // Daily cycle
+
+            var predictedHealth = Math.Max(0, Math.Min(100, currentHealth + combinedTrend * hours + cyclicalAdjustment));
+
+            // Confidence decreases over time but is higher with more trend history
+            var baseConfidence = Math.Min(trendHistory.Count / 20.0, 0.9);
+            var timeDecay = Math.Max(0, 1.0 - hours * 0.02); // Slower decay with history
+            var confidence = baseConfidence * timeDecay;
+
+            var reasoningFactors = $"Historical trend analysis: short-term {shortTermTrend:F1}, long-term {longTermTrend:F1}";
+            if (Math.Abs(cyclicalAdjustment) > 0.5)
+                reasoningFactors += $", cyclical pattern detected";
+
+            predictions.Add(new HealthPrediction
+            {
+                PredictionTime = DateTime.UtcNow.AddHours(hours),
+                PredictedHealthScore = predictedHealth,
+                Confidence = confidence,
+                ReasoningFactors = reasoningFactors
+            });
+        }
+
+        return predictions;
+    }
+
+    private List<HealthPrediction> GenerateSimplePredictions(List<HealthCheckRecord> records)
+    {
+        var predictions = new List<HealthPrediction>();
 
         // Simple trend-based predictions for next 24 hours
         var recentTrend = CalculateRecentTrend(records);
         var currentHealth = CalculateHealthScore(records.TakeLast(60).ToList()); // Last hour
-        
+
         for (int hours = 1; hours <= 24; hours++)
         {
             var predictedHealth = Math.Max(0, Math.Min(100, currentHealth + recentTrend * hours));
             var confidence = Math.Max(0, 1.0 - hours * 0.03); // Decreasing confidence over time
-            
+
             predictions.Add(new HealthPrediction
             {
                 PredictionTime = DateTime.UtcNow.AddHours(hours),
@@ -442,6 +586,33 @@ public class HealthTrendCalculator
         }
 
         return predictions;
+    }
+
+    private double DetectCyclicalPatterns(List<HealthTrendData> trendHistory)
+    {
+        if (trendHistory.Count < 10) return 0;
+
+        // Simple cyclical pattern detection based on time of day
+        var hourlyPattern = new double[24];
+        var hourlyCounts = new int[24];
+
+        foreach (var trend in trendHistory)
+        {
+            var hour = trend.CalculatedAt.Hour;
+            hourlyPattern[hour] += trend.OverallHealthScore;
+            hourlyCounts[hour]++;
+        }
+
+        // Calculate average health score for each hour
+        for (int i = 0; i < 24; i++)
+        {
+            if (hourlyCounts[i] > 0)
+                hourlyPattern[i] /= hourlyCounts[i];
+        }
+
+        // Return the variance in hourly patterns (indicator of cyclical behavior)
+        var variance = CalculateVariance(hourlyPattern.Where(h => h > 0).ToList());
+        return Math.Min(variance / 100.0, 5.0); // Cap the cyclical factor
     }
 
     private double CalculateRecentTrend(List<HealthCheckRecord> records)

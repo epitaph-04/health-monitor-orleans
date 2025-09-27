@@ -1,0 +1,426 @@
+@page "/analytics/trends"
+@using HealthMonitor.Client.Components
+@using HealthMonitor.Client.Model
+@using HealthMonitor.Client.Service
+@inject DashboardService DashboardService
+@inject ISnackbar Snackbar
+
+<PageTitle>Trends Analysis - Health Monitor</PageTitle>
+
+<AnalyticsLayout Title="Trends Analysis"
+                Subtitle="Historical Performance & Health Patterns"
+                HeaderIcon="@Icons.Material.Filled.TrendingUp"
+                ShowFilters="true"
+                ShowExport="true"
+                ShowMetricsSummary="true"
+                IsLoading="@_isLoading"
+                DataPointsCount="@_totalDataPoints"
+                ServiceFilters="@_serviceFilters"
+                SelectedHours="@_selectedHours"
+                OnTimeRangeChanged="@OnTimeRangeChanged"
+                OnServiceSelectionChanged="@OnServiceSelectionChanged"
+                OnRefresh="@RefreshData"
+                OnExport="@OnExport">
+
+    <MudStack>
+        <!-- Health Trends Chart -->
+        <MudCard Elevation="6" Style="height: 400px;">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudStack Row AlignItems="AlignItems.Center">
+                        <MudIcon Icon="Icons.Material.Filled.MonitorHeart" Color="Color.Success" />
+                        <MudText Typo="Typo.h6">Health Score Trends</MudText>
+                    </MudStack>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudMenu Icon="Icons.Material.Filled.MoreVert">
+                        <MudMenuItem OnClick="@(() => _showHealthFullscreen = true)">
+                            <MudIcon Icon="Icons.Material.Filled.Fullscreen" Class="mr-2" />
+                            Fullscreen View
+                        </MudMenuItem>
+                        <MudMenuItem>
+                            <MudIcon Icon="Icons.Material.Filled.Share" Class="mr-2" />
+                            Share Chart
+                        </MudMenuItem>
+                    </MudMenu>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent Style="height: calc(100% - 80px);">
+                @if (_healthTrendData.Any())
+                {
+                    <HealthTrendChart Data="@_healthTrendData" Height="300" />
+                }
+                else
+                {
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudIcon Icon="Icons.Material.Filled.Timeline" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6">No Health Trend Data</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Select services to view trends</MudText>
+                    </MudStack>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Response Time Trends Chart -->
+        <MudCard Elevation="6" Style="height: 400px;">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudStack Row AlignItems="AlignItems.Center">
+                        <MudIcon Icon="Icons.Material.Filled.Speed" Color="Color.Info" />
+                        <MudText Typo="Typo.h6">Response Time Trends</MudText>
+                    </MudStack>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudMenu Icon="Icons.Material.Filled.MoreVert">
+                        <MudMenuItem OnClick="@(() => _showResponseTimeFullscreen = true)">
+                            <MudIcon Icon="Icons.Material.Filled.Fullscreen" Class="mr-2" />
+                            Fullscreen View
+                        </MudMenuItem>
+                    </MudMenu>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent Style="height: calc(100% - 80px);">
+                @if (_responseTimeData.Any())
+                {
+                    <ResponseTimeChart Data="@_responseTimeData" Height="300" />
+                }
+                else
+                {
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudIcon Icon="Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6">No Response Time Data</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Select services to view response trends</MudText>
+                    </MudStack>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Trend Statistics Grid -->
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Trend Statistics</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudStack>
+                            @foreach (var stat in _trendStatistics)
+                            {
+                                <MudStack Row Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2">@stat.Label</MudText>
+                                    <MudText Typo="Typo.body1" Style="font-weight: bold;">@stat.Value</MudText>
+                                </MudStack>
+                                <MudDivider />
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Trend Analysis</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudStack>
+                            @foreach (var analysis in _trendAnalysis)
+                            {
+                                <MudAlert Severity="@analysis.Severity" Dense="true">
+                                    <MudStack Row AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@analysis.Icon" />
+                                        <MudStack>
+                                            <MudText Typo="Typo.body2" Style="font-weight: bold;">@analysis.Title</MudText>
+                                            <MudText Typo="Typo.body2">@analysis.Description</MudText>
+                                        </MudStack>
+                                    </MudStack>
+                                </MudAlert>
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Service Performance Comparison -->
+        @if (_servicePerformanceComparison.Any())
+        {
+            <MudCard Elevation="4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Service Performance Comparison</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudDataGrid T="ServicePerformanceData" Items="@_servicePerformanceComparison" Dense="true">
+                        <Columns>
+                            <PropertyColumn Property="x => x.ServiceName" Title="Service" />
+                            <PropertyColumn Property="x => x.AvgHealthScore" Title="Avg Health" Format="F1" />
+                            <PropertyColumn Property="x => x.AvgResponseTime" Title="Avg Response (ms)" Format="F0" />
+                            <PropertyColumn Property="x => x.Availability" Title="Availability" Format="P2" />
+                            <PropertyColumn Property="x => x.Trend">
+                                <CellTemplate>
+                                    <MudChip T="string"
+                                            Color="@GetTrendColor(context.Item.Trend)"
+                                            Size="Size.Small">
+                                        @context.Item.Trend
+                                    </MudChip>
+                                </CellTemplate>
+                            </PropertyColumn>
+                        </Columns>
+                    </MudDataGrid>
+                </MudCardContent>
+            </MudCard>
+        }
+    </MudStack>
+</AnalyticsLayout>
+
+<!-- Fullscreen Dialogs -->
+<FullscreenChartDialog Title="Health Trends - Fullscreen"
+                       IsOpen="_showHealthFullscreen"
+                       ChartData="@_healthTrendData" />
+
+<FullscreenChartDialog Title="Response Time Trends - Fullscreen"
+                       IsOpen="_showResponseTimeFullscreen"
+                       ChartData="@_responseTimeData" />
+
+@code {
+    private List<ServiceFilter> _serviceFilters = new();
+    private List<ChartData> _healthTrendData = new();
+    private List<ChartData> _responseTimeData = new();
+    private List<TrendStatistic> _trendStatistics = new();
+    private List<TrendAnalysis> _trendAnalysis = new();
+    private List<ServicePerformanceData> _servicePerformanceComparison = new();
+
+    private bool _isLoading = true;
+    private int _selectedHours = 24;
+    private int _totalDataPoints = 0;
+    private bool _showHealthFullscreen = false;
+    private bool _showResponseTimeFullscreen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await LoadServiceFilters();
+            await LoadTrendData();
+            await LoadStatistics();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading trends data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadServiceFilters()
+    {
+        var services = await DashboardService.GetAllServices();
+        _serviceFilters = services.Select(s => new ServiceFilter
+        {
+            ServiceId = s.Id,
+            IsSelected = true,
+            StatusColor = Color.Primary
+        }).ToList();
+    }
+
+    private async Task LoadTrendData()
+    {
+        _healthTrendData.Clear();
+        _responseTimeData.Clear();
+        _servicePerformanceComparison.Clear();
+
+        var selectedServices = _serviceFilters.Where(s => s.IsSelected).ToList();
+        if (!selectedServices.Any()) return;
+
+        var tasks = selectedServices.Select(async service =>
+        {
+            try
+            {
+                var trendHistory = await DashboardService.GetServiceTrendHistoryAsync(service.ServiceId, _selectedHours);
+                return new { Service = service, TrendHistory = trendHistory };
+            }
+            catch
+            {
+                return new { Service = service, TrendHistory = new List<HealthMonitor.Model.HealthTrendData>() };
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        var performanceData = new List<ServicePerformanceData>();
+
+        foreach (var result in results)
+        {
+            if (!result.TrendHistory.Any()) continue;
+
+            // Health trend data
+            var healthData = result.TrendHistory.Select(t => new ChartData
+            {
+                Time = t.CalculatedAt,
+                Value = t.OverallHealthScore,
+                Label = result.Service.ServiceId,
+                Color = GetServiceColor(result.Service.ServiceId)
+            });
+            _healthTrendData.AddRange(healthData);
+
+            // Response time data
+            var responseData = result.TrendHistory.Select(t => new ChartData
+            {
+                Time = t.CalculatedAt,
+                Value = t.AverageResponseTime.TotalMilliseconds,
+                Label = result.Service.ServiceId,
+                Color = GetServiceColor(result.Service.ServiceId)
+            });
+            _responseTimeData.AddRange(responseData);
+
+            // Performance comparison data
+            var latest = result.TrendHistory.OrderByDescending(t => t.CalculatedAt).FirstOrDefault();
+            if (latest != null)
+            {
+                performanceData.Add(new ServicePerformanceData
+                {
+                    ServiceName = result.Service.ServiceId,
+                    AvgHealthScore = result.TrendHistory.Average(t => t.OverallHealthScore),
+                    AvgResponseTime = result.TrendHistory.Average(t => t.AverageResponseTime.TotalMilliseconds),
+                    Availability = latest.AvailabilityPercentage / 100.0,
+                    Trend = latest.HealthTrend.ToString()
+                });
+            }
+        }
+
+        _servicePerformanceComparison = performanceData.OrderByDescending(p => p.AvgHealthScore).ToList();
+        _totalDataPoints = _healthTrendData.Count;
+    }
+
+    private async Task LoadStatistics()
+    {
+        _trendStatistics.Clear();
+        _trendAnalysis.Clear();
+
+        if (_healthTrendData.Any())
+        {
+            var avgHealth = _healthTrendData.Average(d => d.Value);
+            var minHealth = _healthTrendData.Min(d => d.Value);
+            var maxHealth = _healthTrendData.Max(d => d.Value);
+
+            _trendStatistics.AddRange(new[]
+            {
+                new TrendStatistic { Label = "Average Health Score", Value = $"{avgHealth:F1}%" },
+                new TrendStatistic { Label = "Best Performance", Value = $"{maxHealth:F1}%" },
+                new TrendStatistic { Label = "Lowest Performance", Value = $"{minHealth:F1}%" },
+                new TrendStatistic { Label = "Health Variance", Value = $"{maxHealth - minHealth:F1}%" }
+            });
+
+            // Generate trend analysis
+            if (avgHealth >= 95)
+            {
+                _trendAnalysis.Add(new TrendAnalysis
+                {
+                    Title = "Excellent Performance",
+                    Description = "All services maintain excellent health scores",
+                    Severity = Severity.Success,
+                    Icon = Icons.Material.Filled.CheckCircle
+                });
+            }
+            else if (avgHealth >= 80)
+            {
+                _trendAnalysis.Add(new TrendAnalysis
+                {
+                    Title = "Good Performance",
+                    Description = "Services show good overall performance with room for improvement",
+                    Severity = Severity.Info,
+                    Icon = Icons.Material.Filled.Info
+                });
+            }
+            else
+            {
+                _trendAnalysis.Add(new TrendAnalysis
+                {
+                    Title = "Performance Issues",
+                    Description = "Several services show declining performance trends",
+                    Severity = Severity.Warning,
+                    Icon = Icons.Material.Filled.Warning
+                });
+            }
+        }
+    }
+
+    private async Task OnTimeRangeChanged(int hours)
+    {
+        if (_selectedHours != hours)
+        {
+            _selectedHours = hours;
+            await LoadTrendData();
+            await LoadStatistics();
+        }
+    }
+
+    private async Task OnServiceSelectionChanged(List<ServiceFilter> filters)
+    {
+        _serviceFilters = filters;
+        await LoadTrendData();
+        await LoadStatistics();
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadInitialData();
+        Snackbar.Add("Trends data refreshed successfully!", Severity.Success);
+    }
+
+    private Task OnExport(string format)
+    {
+        Snackbar.Add($"Exporting trends data as {format.ToUpper()}...", Severity.Info);
+        return Task.CompletedTask;
+    }
+
+    private string GetServiceColor(string serviceId) =>
+        serviceId.GetHashCode() % 2 == 0 ? "#2196F3" : "#4CAF50";
+
+    private Color GetTrendColor(string trend) => trend switch
+    {
+        "Improving" => Color.Success,
+        "Declining" => Color.Error,
+        "Stable" => Color.Info,
+        _ => Color.Default
+    };
+
+    public class TrendStatistic
+    {
+        public string Label { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    public class TrendAnalysis
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public Severity Severity { get; set; }
+        public string Icon { get; set; } = "";
+    }
+
+    public class ServicePerformanceData
+    {
+        public string ServiceName { get; set; } = "";
+        public double AvgHealthScore { get; set; }
+        public double AvgResponseTime { get; set; }
+        public double Availability { get; set; }
+        public string Trend { get; set; } = "";
+    }
+}

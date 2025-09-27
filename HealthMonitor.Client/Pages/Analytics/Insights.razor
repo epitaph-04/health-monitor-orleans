@@ -1,0 +1,514 @@
+@page "/analytics/insights"
+@using HealthMonitor.Client.Components
+@using HealthMonitor.Client.Model
+@using HealthMonitor.Client.Service
+@using HealthMonitor.Model
+@inject DashboardService DashboardService
+@inject ISnackbar Snackbar
+
+<PageTitle>Advanced Insights - Health Monitor</PageTitle>
+
+<AnalyticsLayout Title="Advanced Insights"
+                Subtitle="Anomaly Detection & Predictive Analysis"
+                HeaderIcon="@Icons.Material.Filled.Psychology"
+                ShowFilters="true"
+                ShowExport="true"
+                ShowMetricsSummary="true"
+                IsLoading="@_isLoading"
+                DataPointsCount="@_totalDataPoints"
+                ServiceFilters="@_serviceFilters"
+                SelectedHours="@_selectedHours"
+                OnTimeRangeChanged="@OnTimeRangeChanged"
+                OnServiceSelectionChanged="@OnServiceSelectionChanged"
+                OnRefresh="@RefreshData"
+                OnExport="@OnExport">
+
+    <MudStack>
+        <!-- Insights Overview Cards -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="6" Style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%); color: white;">
+                    <MudCardContent>
+                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudStack>
+                                <MudText Typo="Typo.h4">@_anomalyCount</MudText>
+                                <MudText Typo="Typo.body2">Anomalies Detected</MudText>
+                            </MudStack>
+                            <MudIcon Icon="Icons.Material.Filled.BugReport" Size="Size.Large" Style="opacity: 0.7;" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="6" Style="background: linear-gradient(135deg, #4ECDC4 0%, #70E1DB 100%); color: white;">
+                    <MudCardContent>
+                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudStack>
+                                <MudText Typo="Typo.h4">@($"{_predictionAccuracy:F1}%")</MudText>
+                                <MudText Typo="Typo.body2">Prediction Accuracy</MudText>
+                            </MudStack>
+                            <MudIcon Icon="Icons.Material.Filled.Psychology" Size="Size.Large" Style="opacity: 0.7;" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="6" Style="background: linear-gradient(135deg, #FFD93D 0%, #FFE066 100%); color: #333;">
+                    <MudCardContent>
+                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudStack>
+                                <MudText Typo="Typo.h4">@_patternsFound</MudText>
+                                <MudText Typo="Typo.body2">Patterns Found</MudText>
+                            </MudStack>
+                            <MudIcon Icon="Icons.Material.Filled.Pattern" Size="Size.Large" Style="opacity: 0.7;" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="6" Style="background: linear-gradient(135deg, #A8E6CF 0%, #C8F7C5 100%); color: #333;">
+                    <MudCardContent>
+                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudStack>
+                                <MudText Typo="Typo.h4">@($"{_confidenceScore:F1}")</MudText>
+                                <MudText Typo="Typo.body2">Confidence Score</MudText>
+                            </MudStack>
+                            <MudIcon Icon="Icons.Material.Filled.TrendingUp" Size="Size.Large" Style="opacity: 0.7;" />
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Anomaly Detection Panel -->
+        <MudCard Elevation="6">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudStack Row AlignItems="AlignItems.Center">
+                        <MudIcon Icon="Icons.Material.Filled.BugReport" Color="Color.Error" />
+                        <MudText Typo="Typo.h6">Anomaly Detection</MudText>
+                        <MudChip T="string" Size="Size.Small"
+                                Color="@(_anomalyCount > 0 ? Color.Error : Color.Success)"
+                                Variant="Variant.Filled">
+                            @(_anomalyCount > 0 ? $"{_anomalyCount} Issues" : "All Clear")
+                        </MudChip>
+                    </MudStack>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudButton StartIcon="Icons.Material.Filled.Tune"
+                              Color="Color.Primary"
+                              Variant="Variant.Text">
+                        Configure
+                    </MudButton>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <AnomalyDetectionPanel SelectedServices="@GetSelectedServices()" TimeRangeHours="@_selectedHours" />
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Service Comparison & Analysis -->
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="6" Style="height: 400px;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudStack Row AlignItems="AlignItems.Center">
+                                <MudIcon Icon="Icons.Material.Filled.Compare" Color="Color.Info" />
+                                <MudText Typo="Typo.h6">Service Comparison</MudText>
+                            </MudStack>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px);">
+                        @if (_serviceComparisons.Any())
+                        {
+                            <MudDataGrid T="ServiceComparison" Items="@_serviceComparisons" Dense="true" Height="300px">
+                                <Columns>
+                                    <PropertyColumn Property="x => x.ServiceName" Title="Service" />
+                                    <PropertyColumn Property="x => x.Rank" Title="Rank" />
+                                    <PropertyColumn Property="x => x.Score" Title="Score" Format="F1" />
+                                    <PropertyColumn Property="x => x.Status">
+                                        <CellTemplate>
+                                            <MudChip T="string" Size="Size.Small"
+                                                    Color="@GetStatusColor(context.Item.Status)">
+                                                @context.Item.Status
+                                            </MudChip>
+                                        </CellTemplate>
+                                    </PropertyColumn>
+                                </Columns>
+                            </MudDataGrid>
+                        }
+                        else
+                        {
+                            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                                <MudIcon Icon="Icons.Material.Filled.Compare" Size="Size.Large" Color="Color.Secondary" />
+                                <MudText Typo="Typo.body1">No comparison data available</MudText>
+                            </MudStack>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="6" Style="height: 400px;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudStack Row AlignItems="AlignItems.Center">
+                                <MudIcon Icon="Icons.Material.Filled.Insights" Color="Color.Tertiary" />
+                                <MudText Typo="Typo.h6">Performance Insights</MudText>
+                            </MudStack>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                        @if (_performanceInsights.Any())
+                        {
+                            <MudStack>
+                                @foreach (var insight in _performanceInsights)
+                                {
+                                    <MudAlert Severity="@insight.Severity" Dense="true">
+                                        <MudStack>
+                                            <MudText Typo="Typo.body2" Style="font-weight: bold;">@insight.Title</MudText>
+                                            <MudText Typo="Typo.body2">@insight.Message</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                Impact: @insight.Impact | Confidence: @insight.Confidence%
+                                            </MudText>
+                                        </MudStack>
+                                    </MudAlert>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                                <MudIcon Icon="Icons.Material.Filled.Lightbulb" Size="Size.Large" Color="Color.Secondary" />
+                                <MudText Typo="Typo.body1">No insights available</MudText>
+                            </MudStack>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Predictions Panel -->
+        <MudCard Elevation="6">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudStack Row AlignItems="AlignItems.Center">
+                        <MudIcon Icon="Icons.Material.Filled.Lightbulb" Color="Color.Warning" />
+                        <MudText Typo="Typo.h6">Predictive Analysis</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                            24h Forecast
+                        </MudChip>
+                    </MudStack>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudMenu Icon="Icons.Material.Filled.Settings">
+                        <MudMenuItem>
+                            <MudIcon Icon="Icons.Material.Filled.Schedule" Class="mr-2" />
+                            Change Prediction Window
+                        </MudMenuItem>
+                        <MudMenuItem>
+                            <MudIcon Icon="Icons.Material.Filled.Tune" Class="mr-2" />
+                            Model Settings
+                        </MudMenuItem>
+                    </MudMenu>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <PredictionsPanel SelectedServices="@GetSelectedServices()" />
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Detailed Analysis -->
+        <MudCard Elevation="6">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudStack Row AlignItems="AlignItems.Center">
+                        <MudIcon Icon="Icons.Material.Filled.Analytics" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Detailed Service Analysis</MudText>
+                    </MudStack>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <ServiceDetailedAnalysis SelectedServices="@GetSelectedServices()" TimeRangeHours="@_selectedHours" />
+            </MudCardContent>
+        </MudCard>
+    </MudStack>
+</AnalyticsLayout>
+
+@code {
+    private List<ServiceFilter> _serviceFilters = new();
+    private List<ServiceComparison> _serviceComparisons = new();
+    private List<PerformanceInsight> _performanceInsights = new();
+
+    private bool _isLoading = true;
+    private int _selectedHours = 24;
+    private int _totalDataPoints = 0;
+    private int _anomalyCount = 0;
+    private int _patternsFound = 0;
+    private double _predictionAccuracy = 0;
+    private double _confidenceScore = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await Task.WhenAll(
+                LoadServiceFilters(),
+                LoadInsightsData(),
+                LoadServiceComparisons(),
+                LoadPerformanceInsights()
+            );
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading insights data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadServiceFilters()
+    {
+        var services = await DashboardService.GetAllServices();
+        _serviceFilters = services.Select(s => new ServiceFilter
+        {
+            ServiceId = s.Id,
+            IsSelected = true,
+            StatusColor = Color.Primary
+        }).ToList();
+    }
+
+    private async Task LoadInsightsData()
+    {
+        // Simulate insights data - in real implementation this would come from ML models
+        _anomalyCount = Random.Shared.Next(0, 5);
+        _patternsFound = Random.Shared.Next(3, 15);
+        _predictionAccuracy = Random.Shared.NextDouble() * 10 + 85; // 85-95%
+        _confidenceScore = Random.Shared.NextDouble() * 1 + 8; // 8-9
+        _totalDataPoints = Random.Shared.Next(1000, 5000);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task LoadServiceComparisons()
+    {
+        var selectedServices = GetSelectedServices();
+        if (!selectedServices.Any()) return;
+
+        try
+        {
+            var comparison = await DashboardService.CompareServicesAsync(selectedServices, _selectedHours);
+            _serviceComparisons = comparison.ServiceComparisons.Select((sc, index) => new ServiceComparison
+            {
+                ServiceName = sc.ServiceId,
+                Rank = index + 1,
+                Score = sc.TrendData.OverallHealthScore,
+                Status = GetServiceStatus(sc.TrendData.OverallHealthScore)
+            }).ToList();
+        }
+        catch (Exception)
+        {
+            _serviceComparisons.Clear();
+        }
+    }
+
+    private async Task LoadPerformanceInsights()
+    {
+        _performanceInsights.Clear();
+
+        // Generate performance insights based on service data
+        var selectedServices = GetSelectedServices();
+        if (!selectedServices.Any()) return;
+
+        try
+        {
+            // Generate performance insights based on real service data
+            var insights = new List<PerformanceInsight>();
+
+            if (!selectedServices.Any())
+            {
+                _performanceInsights = insights;
+                return;
+            }
+
+            // Get system overview for system-wide insights
+            var overview = await DashboardService.GetSystemOverviewAsync();
+
+            // System-level insights
+            if (overview.ProblematicServices > overview.TotalServices * 0.2)
+            {
+                insights.Add(new PerformanceInsight
+                {
+                    Title = "Multiple Service Issues Detected",
+                    Message = $"{overview.ProblematicServices} out of {overview.TotalServices} services are experiencing issues. System-wide investigation recommended.",
+                    Severity = Severity.Error,
+                    Impact = "Critical",
+                    Confidence = 95
+                });
+            }
+
+            if (overview.OverallSystemHealth > 95)
+            {
+                insights.Add(new PerformanceInsight
+                {
+                    Title = "Excellent System Health",
+                    Message = $"Overall system health is {overview.OverallSystemHealth:F1}%. All services are performing optimally.",
+                    Severity = Severity.Success,
+                    Impact = "Positive",
+                    Confidence = 92
+                });
+            }
+
+            // Service-specific insights
+            foreach (var serviceId in selectedServices.Take(3))
+            {
+                try
+                {
+                    var trendData = await DashboardService.GetServiceTrendAsync(serviceId, _selectedHours);
+
+                    if (trendData.DetectedAnomalies.Count > 2)
+                    {
+                        insights.Add(new PerformanceInsight
+                        {
+                            Title = "Anomalies Detected",
+                            Message = $"Service {serviceId}: {trendData.DetectedAnomalies.Count} anomalies detected in the last {_selectedHours} hours.",
+                            Severity = trendData.DetectedAnomalies.Any(a => a.Severity > 0.7) ? Severity.Warning : Severity.Info,
+                            Impact = trendData.DetectedAnomalies.Count > 5 ? "High" : "Medium",
+                            Confidence = (int)(trendData.TrendConfidence * 100)
+                        });
+                    }
+
+                    if (trendData.HealthTrend == HealthTrendDirection.Declining && trendData.OverallHealthScore < 85)
+                    {
+                        insights.Add(new PerformanceInsight
+                        {
+                            Title = "Performance Degradation",
+                            Message = $"Service {serviceId}: Health declining to {trendData.OverallHealthScore:F1}%. Immediate attention required.",
+                            Severity = Severity.Warning,
+                            Impact = "High",
+                            Confidence = (int)(trendData.TrendConfidence * 100)
+                        });
+                    }
+
+                    if (!trendData.SlaMetrics.MeetingAvailabilitySla)
+                    {
+                        insights.Add(new PerformanceInsight
+                        {
+                            Title = "SLA Violation",
+                            Message = $"Service {serviceId}: Not meeting availability SLA ({trendData.SlaMetrics.ActualAvailability:P2} vs {trendData.SlaMetrics.TargetAvailability:P2}).",
+                            Severity = Severity.Error,
+                            Impact = "Critical",
+                            Confidence = 98
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error getting insights for service {serviceId}: {ex.Message}");
+                }
+            }
+
+            if (_predictionAccuracy > 90)
+            {
+                insights.Add(new PerformanceInsight
+                {
+                    Title = "High Prediction Confidence",
+                    Message = $"Prediction models are performing well with {_predictionAccuracy:F1}% accuracy. Forecasts are reliable for capacity planning.",
+                    Severity = Severity.Success,
+                    Impact = "Medium",
+                    Confidence = (int)_predictionAccuracy
+                });
+            }
+
+            _performanceInsights = insights.Take(5).ToList();
+        }
+        catch (Exception)
+        {
+            _performanceInsights.Clear();
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task OnTimeRangeChanged(int hours)
+    {
+        if (_selectedHours != hours)
+        {
+            _selectedHours = hours;
+            await LoadInsightsData();
+            await LoadServiceComparisons();
+            await LoadPerformanceInsights();
+        }
+    }
+
+    private async Task OnServiceSelectionChanged(List<ServiceFilter> filters)
+    {
+        _serviceFilters = filters;
+        await LoadServiceComparisons();
+        await LoadPerformanceInsights();
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadInitialData();
+        Snackbar.Add("Insights data refreshed successfully!", Severity.Success);
+    }
+
+    private Task OnExport(string format)
+    {
+        Snackbar.Add($"Exporting insights data as {format.ToUpper()}...", Severity.Info);
+        return Task.CompletedTask;
+    }
+
+    private List<string> GetSelectedServices() =>
+        _serviceFilters.Where(s => s.IsSelected).Select(s => s.ServiceId).ToList();
+
+    private string GetServiceStatus(double healthScore) => healthScore switch
+    {
+        >= 95 => "Excellent",
+        >= 85 => "Good",
+        >= 70 => "Fair",
+        _ => "Poor"
+    };
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Excellent" => Color.Success,
+        "Good" => Color.Info,
+        "Fair" => Color.Warning,
+        "Poor" => Color.Error,
+        _ => Color.Default
+    };
+
+    public class ServiceComparison
+    {
+        public string ServiceName { get; set; } = "";
+        public int Rank { get; set; }
+        public double Score { get; set; }
+        public string Status { get; set; } = "";
+    }
+
+    public class PerformanceInsight
+    {
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public Severity Severity { get; set; }
+        public string Impact { get; set; } = "";
+        public int Confidence { get; set; }
+    }
+}

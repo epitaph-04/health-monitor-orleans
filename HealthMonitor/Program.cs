@@ -6,8 +6,10 @@ using HealthMonitor.Model;
 using HealthMonitor.Services;
 using HealthMonitor.Services.BgService;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
 using MudBlazor;
 using MudBlazor.Services;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 

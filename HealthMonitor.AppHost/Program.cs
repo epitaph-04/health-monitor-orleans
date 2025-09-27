@@ -2,7 +2,6 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var redis = builder
     .AddRedis("orleans-redis")
-    .WithDataVolume("orleans")
     .WithRedisInsight();
 
 var orleans = builder

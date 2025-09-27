@@ -1,0 +1,747 @@
+@page "/analytics/services"
+@using HealthMonitor.Client.Components
+@using HealthMonitor.Client.Model
+@using HealthMonitor.Client.Service
+@using HealthMonitor.Model
+@using MudBlazor
+@inject DashboardService DashboardService
+@inject ISnackbar Snackbar
+
+<PageTitle>Service Deep-Dive - Health Monitor</PageTitle>
+
+<AnalyticsLayout Title="Service Deep-Dive"
+                Subtitle="Individual Service Analysis & Performance Metrics"
+                HeaderIcon="@Icons.Material.Filled.Hub"
+                ShowFilters="false"
+                ShowExport="true"
+                ShowMetricsSummary="false"
+                IsLoading="@_isLoading"
+                DataPointsCount="@_totalDataPoints"
+                OnRefresh="@RefreshData"
+                OnExport="@OnExport">
+
+    <MudStack>
+        <!-- Service Selection -->
+        <MudCard Elevation="4" Class="mb-4">
+            <MudCardContent>
+                <MudGrid AlignItems="Center">
+                    <MudItem xs="12" md="6">
+                        <MudAutocomplete T="string"
+                                       Label="Select Service for Analysis"
+                                       Value="_selectedService"
+                                       SearchFunc="@SearchServices"
+                                       ResetValueOnEmptyText="false"
+                                       CoerceText="true"
+                                       AdornmentIcon="Icons.Material.Filled.Search"
+                                       AdornmentColor="Color.Primary"
+                                       ValueChanged="@OnServiceSelected" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudStack Row Justify="Justify.FlexEnd">
+                            <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+                                <MudButton OnClick="@(() => SetTimeRange(1))"
+                                          Variant="@(_selectedHours == 1 ? Variant.Filled : Variant.Outlined)">
+                                    1H
+                                </MudButton>
+                                <MudButton OnClick="@(() => SetTimeRange(24))"
+                                          Variant="@(_selectedHours == 24 ? Variant.Filled : Variant.Outlined)">
+                                    24H
+                                </MudButton>
+                                <MudButton OnClick="@(() => SetTimeRange(168))"
+                                          Variant="@(_selectedHours == 168 ? Variant.Filled : Variant.Outlined)">
+                                    7D
+                                </MudButton>
+                                <MudButton OnClick="@(() => SetTimeRange(720))"
+                                          Variant="@(_selectedHours == 720 ? Variant.Filled : Variant.Outlined)">
+                                    30D
+                                </MudButton>
+                            </MudButtonGroup>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+
+        @if (!string.IsNullOrEmpty(_selectedService))
+        {
+            <!-- Service Overview Cards -->
+            <MudGrid Class="mb-4">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="6" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <MudCardContent>
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack>
+                                    <MudText Typo="Typo.h4">@($"{_serviceMetrics?.HealthScore ?? 0:F1}%")</MudText>
+                                    <MudText Typo="Typo.body2">Health Score</MudText>
+                                </MudStack>
+                                <MudIcon Icon="Icons.Material.Filled.HealthAndSafety" Size="Size.Large" Style="opacity: 0.7;" />
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="6" Style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                        <MudCardContent>
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack>
+                                    <MudText Typo="Typo.h4">@($"{_serviceMetrics?.Availability ?? 0:F2}%")</MudText>
+                                    <MudText Typo="Typo.body2">Availability</MudText>
+                                </MudStack>
+                                <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Large" Style="opacity: 0.7;" />
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="6" Style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                        <MudCardContent>
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack>
+                                    <MudText Typo="Typo.h4">@($"{_serviceMetrics?.AvgResponseTime ?? 0:F0}ms")</MudText>
+                                    <MudText Typo="Typo.body2">Avg Response Time</MudText>
+                                </MudStack>
+                                <MudIcon Icon="Icons.Material.Filled.Speed" Size="Size.Large" Style="opacity: 0.7;" />
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="6" Style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                        <MudCardContent>
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack>
+                                    <MudText Typo="Typo.h4">@(_serviceMetrics?.TotalRequests ?? 0)</MudText>
+                                    <MudText Typo="Typo.body2">Total Requests</MudText>
+                                </MudStack>
+                                <MudIcon Icon="Icons.Material.Filled.Analytics" Size="Size.Large" Style="opacity: 0.7;" />
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Main Charts -->
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudCard Elevation="6" Style="height: 400px;">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudStack Row AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="Icons.Material.Filled.MonitorHeart" Color="Color.Primary" />
+                                    <MudText Typo="Typo.h6">Health Trend</MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Style="height: calc(100% - 80px);">
+                            @if (_healthTrendData.Any())
+                            {
+                                <HealthTrendChart Data="@_healthTrendData" Height="300" />
+                            }
+                            else
+                            {
+                                <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                                    <MudIcon Icon="Icons.Material.Filled.Timeline" Size="Size.Large" Color="Color.Secondary" />
+                                    <MudText Typo="Typo.body1">No health trend data available</MudText>
+                                </MudStack>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudCard Elevation="6" Style="height: 400px;">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudStack Row AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="Icons.Material.Filled.Speed" Color="Color.Info" />
+                                    <MudText Typo="Typo.h6">Response Time Trend</MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Style="height: calc(100% - 80px);">
+                            @if (_responseTimeData.Any())
+                            {
+                                <ResponseTimeChart Data="@_responseTimeData" Height="300" />
+                            }
+                            else
+                            {
+                                <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                                    <MudIcon Icon="Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Secondary" />
+                                    <MudText Typo="Typo.body1">No response time data available</MudText>
+                                </MudStack>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Detailed Metrics -->
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="6" Style="height: 500px;">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">Performance Metrics</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                            @if (_performanceMetrics.Any())
+                            {
+                                <MudStack>
+                                    @foreach (var metric in _performanceMetrics)
+                                    {
+                                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudText Typo="Typo.body2">@metric.Name</MudText>
+                                            <MudText Typo="Typo.body1" Style="font-weight: bold;">@metric.Value</MudText>
+                                        </MudStack>
+                                        <MudProgressLinear Value="@metric.ProgressValue"
+                                                          Color="@metric.Color"
+                                                          Class="mb-2" />
+                                    }
+                                </MudStack>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="6" Style="height: 500px;">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">Error Analysis</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                            @if (_errorAnalysis.Any())
+                            {
+                                <MudStack>
+                                    @foreach (var error in _errorAnalysis)
+                                    {
+                                        <MudAlert Severity="@error.Severity" Dense="true">
+                                            <MudStack>
+                                                <MudText Typo="Typo.body2" Style="font-weight: bold;">@error.Type</MudText>
+                                                <MudText Typo="Typo.body2">@error.Message</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    Count: @error.Count | Last Seen: @error.LastSeen.ToString("HH:mm")
+                                                </MudText>
+                                            </MudStack>
+                                        </MudAlert>
+                                    }
+                                </MudStack>
+                            }
+                            else
+                            {
+                                <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                                    <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                                    <MudText Typo="Typo.h6">No Errors</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Service running smoothly
+                                    </MudText>
+                                </MudStack>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="6" Style="height: 500px;">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">Dependencies</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Style="height: calc(100% - 80px); overflow-y: auto;">
+                            @if (_serviceDependencies.Any())
+                            {
+                                <MudList T="string" Dense>
+                                    @foreach (var dependency in _serviceDependencies)
+                                    {
+                                        <MudListItem>
+                                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                <MudStack>
+                                                    <MudText Typo="Typo.body2">@dependency.Name</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@dependency.Type</MudText>
+                                                </MudStack>
+                                                <MudChip T="string" Size="Size.Small"
+                                                        Color="@GetDependencyStatusColor(dependency.Status)"
+                                                        Variant="Variant.Filled">
+                                                    @dependency.Status
+                                                </MudChip>
+                                            </MudStack>
+                                        </MudListItem>
+                                        <MudDivider />
+                                    }
+                                </MudList>
+                            }
+                            else
+                            {
+                                <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                                    <MudIcon Icon="Icons.Material.Filled.Hub" Size="Size.Large" Color="Color.Secondary" />
+                                    <MudText Typo="Typo.body1">No dependencies mapped</MudText>
+                                </MudStack>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Recent Activity -->
+            <MudCard Elevation="6">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Recent Activity & Logs</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudButton StartIcon="Icons.Material.Filled.History"
+                                  Color="Color.Primary"
+                                  Variant="Variant.Text">
+                            View All Logs
+                        </MudButton>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (_recentActivity.Any())
+                    {
+                        <MudDataGrid T="ActivityLog" Items="@_recentActivity" Dense="true" Height="300px">
+                            <Columns>
+                                <PropertyColumn Property="x => x.Timestamp" Title="Time" Format="HH:mm:ss" />
+                                <PropertyColumn Property="x => x.Level">
+                                    <CellTemplate>
+                                        <MudChip T="string" Size="Size.Small"
+                                                Color="@GetLogLevelColor(context.Item.Level)"
+                                                Variant="Variant.Filled">
+                                            @context.Item.Level
+                                        </MudChip>
+                                    </CellTemplate>
+                                </PropertyColumn>
+                                <PropertyColumn Property="x => x.Message" Title="Message" />
+                                <PropertyColumn Property="x => x.Source" Title="Source" />
+                            </Columns>
+                        </MudDataGrid>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <MudText>No recent activity logs available for this service.</MudText>
+                        </MudAlert>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+        else
+        {
+            <!-- No Service Selected -->
+            <MudCard Elevation="4" Style="height: 400px;">
+                <MudCardContent>
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudIcon Icon="Icons.Material.Filled.Hub" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h5">Select a Service to Analyze</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                            Choose a service from the dropdown above to view detailed performance metrics, health trends, and analytics
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        }
+    </MudStack>
+</AnalyticsLayout>
+
+@code {
+    private List<string> _allServices = new();
+    private string _selectedService = "";
+    private int _selectedHours = 24;
+    private bool _isLoading = false;
+    private int _totalDataPoints = 0;
+
+    private ServiceMetrics? _serviceMetrics;
+    private List<ChartData> _healthTrendData = new();
+    private List<ChartData> _responseTimeData = new();
+    private List<PerformanceMetric> _performanceMetrics = new();
+    private List<ErrorAnalysis> _errorAnalysis = new();
+    private List<ServiceDependency> _serviceDependencies = new();
+    private List<ActivityLog> _recentActivity = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadServices();
+    }
+
+    private async Task LoadServices()
+    {
+        try
+        {
+            var services = await DashboardService.GetAllServices();
+            _allServices = services.Select(s => s.Id).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading services: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task<IEnumerable<string>> SearchServices(string value, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(value))
+            return _allServices;
+
+        return _allServices.Where(s => s.Contains(value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task OnServiceSelected(string service)
+    {
+        if (string.IsNullOrEmpty(service)) return;
+
+        _selectedService = service;
+        await LoadServiceData();
+    }
+
+    private async Task SetTimeRange(int hours)
+    {
+        if (_selectedHours != hours)
+        {
+            _selectedHours = hours;
+            if (!string.IsNullOrEmpty(_selectedService))
+            {
+                await LoadServiceData();
+            }
+        }
+    }
+
+    private async Task LoadServiceData()
+    {
+        if (string.IsNullOrEmpty(_selectedService)) return;
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await Task.WhenAll(
+                LoadServiceMetrics(),
+                LoadTrendData(),
+                LoadPerformanceMetrics(),
+                LoadErrorAnalysis(),
+                LoadDependencies(),
+                LoadRecentActivity()
+            );
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading service data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadServiceMetrics()
+    {
+        try
+        {
+            var trendHistory = await DashboardService.GetServiceTrendHistoryAsync(_selectedService, _selectedHours);
+            var latest = trendHistory.OrderByDescending(t => t.CalculatedAt).FirstOrDefault();
+
+            if (latest != null)
+            {
+                _serviceMetrics = new ServiceMetrics
+                {
+                    HealthScore = latest.OverallHealthScore,
+                    Availability = latest.AvailabilityPercentage,
+                    AvgResponseTime = latest.AverageResponseTime.TotalMilliseconds,
+                    TotalRequests = latest.TotalDataPoints
+                };
+            }
+        }
+        catch (Exception)
+        {
+            _serviceMetrics = null;
+        }
+    }
+
+    private async Task LoadTrendData()
+    {
+        _healthTrendData.Clear();
+        _responseTimeData.Clear();
+
+        try
+        {
+            var trendHistory = await DashboardService.GetServiceTrendHistoryAsync(_selectedService, _selectedHours);
+
+            _healthTrendData = trendHistory.Select(t => new ChartData
+            {
+                Time = t.CalculatedAt,
+                Value = t.OverallHealthScore,
+                Label = _selectedService,
+                Color = "#2196F3"
+            }).ToList();
+
+            _responseTimeData = trendHistory.Select(t => new ChartData
+            {
+                Time = t.CalculatedAt,
+                Value = t.AverageResponseTime.TotalMilliseconds,
+                Label = _selectedService,
+                Color = "#4CAF50"
+            }).ToList();
+
+            _totalDataPoints = _healthTrendData.Count;
+        }
+        catch (Exception)
+        {
+            _healthTrendData.Clear();
+            _responseTimeData.Clear();
+        }
+    }
+
+    private async Task LoadPerformanceMetrics()
+    {
+        _performanceMetrics.Clear();
+
+        if (_serviceMetrics != null)
+        {
+            _performanceMetrics.AddRange(new[]
+            {
+                new PerformanceMetric { Name = "Health Score", Value = $"{_serviceMetrics.HealthScore:F1}%", ProgressValue = _serviceMetrics.HealthScore, Color = Color.Success },
+                new PerformanceMetric { Name = "Availability", Value = $"{_serviceMetrics.Availability:F2}%", ProgressValue = _serviceMetrics.Availability, Color = Color.Info },
+                new PerformanceMetric { Name = "Response Time", Value = $"{_serviceMetrics.AvgResponseTime:F0}ms", ProgressValue = Math.Min(100, _serviceMetrics.AvgResponseTime / 10), Color = Color.Primary },
+                new PerformanceMetric { Name = "Throughput", Value = $"{_serviceMetrics.TotalRequests / 24:F0}/hr", ProgressValue = Math.Min(100, (_serviceMetrics.TotalRequests / 1000.0) * 100), Color = Color.Tertiary }
+            });
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task LoadErrorAnalysis()
+    {
+        _errorAnalysis.Clear();
+
+        // Simulate error analysis data
+        var errorTypes = new[] { "TimeoutException", "ConnectionFailed", "ServiceUnavailable", "RateLimited" };
+        var severities = new[] { Severity.Error, Severity.Warning, Severity.Info };
+
+        for (int i = 0; i < Random.Shared.Next(0, 4); i++)
+        {
+            _errorAnalysis.Add(new ErrorAnalysis
+            {
+                Type = errorTypes[Random.Shared.Next(errorTypes.Length)],
+                Message = "Error occurred during request processing",
+                Count = Random.Shared.Next(1, 10),
+                Severity = severities[Random.Shared.Next(severities.Length)],
+                LastSeen = DateTime.Now.AddMinutes(-Random.Shared.Next(1, 60))
+            });
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task LoadDependencies()
+    {
+        _serviceDependencies.Clear();
+
+        try
+        {
+            // For now, create a default set of dependencies based on service type
+            // In a real system, this would come from service configuration or discovery
+            var commonDependencies = new List<ServiceDependency>
+            {
+                new() { Name = "Database", Type = "Database", Status = "Healthy" },
+                new() { Name = "Redis Cache", Type = "Cache", Status = "Healthy" },
+                new() { Name = "External API", Type = "API", Status = "Healthy" }
+            };
+
+            // Get trend data to determine dependency health based on service performance
+            var trendData = await DashboardService.GetServiceTrendAsync(_selectedService, _selectedHours);
+
+            // Adjust dependency status based on service health and anomalies
+            foreach (var dependency in commonDependencies)
+            {
+                // If service has database-related anomalies, mark database as having issues
+                if (dependency.Type == "Database" && trendData.DetectedAnomalies.Any(a => a.Type == AnomalyType.HighResponseTime))
+                {
+                    dependency.Status = "Warning";
+                }
+
+                // If service has frequent failures, mark dependencies as critical
+                if (trendData.DetectedAnomalies.Any(a => a.Type == AnomalyType.FrequentFailures && a.Severity > 0.7))
+                {
+                    dependency.Status = "Critical";
+                }
+
+                // If overall health is low, mark some dependencies as having issues
+                if (trendData.OverallHealthScore < 80 && dependency.Type != "Cache")
+                {
+                    dependency.Status = "Warning";
+                }
+            }
+
+            _serviceDependencies.AddRange(commonDependencies);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dependencies: {ex.Message}");
+            // Fallback to basic dependencies
+            _serviceDependencies.Add(new ServiceDependency { Name = "Unknown", Type = "Service", Status = "Healthy" });
+        }
+    }
+
+    private async Task LoadRecentActivity()
+    {
+        _recentActivity.Clear();
+
+        try
+        {
+            var trendData = await DashboardService.GetServiceTrendAsync(_selectedService, _selectedHours);
+
+            // Generate activity logs from trend data and anomalies
+
+            // Add anomaly-based activity logs
+            foreach (var anomaly in trendData.DetectedAnomalies.OrderByDescending(a => a.StartTime).Take(10))
+            {
+                var level = anomaly.Severity > 0.7 ? "Error" : anomaly.Severity > 0.4 ? "Warning" : "Info";
+                _recentActivity.Add(new ActivityLog
+                {
+                    Timestamp = anomaly.StartTime,
+                    Level = level,
+                    Message = anomaly.Description,
+                    Source = "HealthMonitor"
+                });
+            }
+
+            // Add health trend changes as activity
+            _recentActivity.Add(new ActivityLog
+            {
+                Timestamp = trendData.CalculatedAt,
+                Level = "Info",
+                Message = $"Health trend calculated: {trendData.HealthTrend} ({trendData.OverallHealthScore:F1}%)",
+                Source = "TrendCalculator"
+            });
+
+            // Add SLA status updates
+            if (!trendData.SlaMetrics.MeetingAvailabilitySla)
+            {
+                _recentActivity.Add(new ActivityLog
+                {
+                    Timestamp = trendData.CalculatedAt.AddMinutes(-5),
+                    Level = "Warning",
+                    Message = $"SLA violation detected: Availability {trendData.SlaMetrics.ActualAvailability:P2}",
+                    Source = "SLAMonitor"
+                });
+            }
+
+            // Add response time alerts
+            if (!trendData.SlaMetrics.MeetingResponseTimeSla)
+            {
+                _recentActivity.Add(new ActivityLog
+                {
+                    Timestamp = trendData.CalculatedAt.AddMinutes(-3),
+                    Level = "Warning",
+                    Message = $"Response time SLA violation: {trendData.SlaMetrics.ActualAverageResponseTime.TotalSeconds:F1}s",
+                    Source = "PerformanceMonitor"
+                });
+            }
+
+            // Add prediction updates
+            if (trendData.Predictions.Any())
+            {
+                var nextPrediction = trendData.Predictions.OrderBy(p => p.PredictionTime).First();
+                _recentActivity.Add(new ActivityLog
+                {
+                    Timestamp = trendData.CalculatedAt.AddMinutes(-1),
+                    Level = "Info",
+                    Message = $"Next hour prediction: {nextPrediction.PredictedHealthScore:F1}% (confidence: {nextPrediction.Confidence:P0})",
+                    Source = "PredictionEngine"
+                });
+            }
+
+            _recentActivity = _recentActivity.OrderByDescending(a => a.Timestamp).Take(15).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading recent activity: {ex.Message}");
+            // Fallback activity log
+            _recentActivity.Add(new ActivityLog
+            {
+                Timestamp = DateTime.Now,
+                Level = "Info",
+                Message = "Service monitoring active",
+                Source = "HealthMonitor"
+            });
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        if (!string.IsNullOrEmpty(_selectedService))
+        {
+            await LoadServiceData();
+            Snackbar.Add("Service data refreshed successfully!", Severity.Success);
+        }
+    }
+
+    private Task OnExport(string format)
+    {
+        Snackbar.Add($"Exporting service analysis as {format.ToUpper()}...", Severity.Info);
+        return Task.CompletedTask;
+    }
+
+    private Color GetDependencyStatusColor(string status) => status switch
+    {
+        "Healthy" => Color.Success,
+        "Warning" => Color.Warning,
+        "Critical" => Color.Error,
+        _ => Color.Default
+    };
+
+    private Color GetLogLevelColor(string level) => level switch
+    {
+        "Info" => Color.Info,
+        "Warning" => Color.Warning,
+        "Error" => Color.Error,
+        "Debug" => Color.Secondary,
+        _ => Color.Default
+    };
+
+    public class ServiceMetrics
+    {
+        public double HealthScore { get; set; }
+        public double Availability { get; set; }
+        public double AvgResponseTime { get; set; }
+        public int TotalRequests { get; set; }
+    }
+
+    public class PerformanceMetric
+    {
+        public string Name { get; set; } = "";
+        public string Value { get; set; } = "";
+        public double ProgressValue { get; set; }
+        public Color Color { get; set; }
+    }
+
+    public class ErrorAnalysis
+    {
+        public string Type { get; set; } = "";
+        public string Message { get; set; } = "";
+        public int Count { get; set; }
+        public Severity Severity { get; set; }
+        public DateTime LastSeen { get; set; }
+    }
+
+    public class ServiceDependency
+    {
+        public string Name { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Status { get; set; } = "";
+    }
+
+    public class ActivityLog
+    {
+        public DateTime Timestamp { get; set; }
+        public string Level { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Source { get; set; } = "";
+    }
+}

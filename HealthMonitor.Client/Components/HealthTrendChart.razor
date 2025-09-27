@@ -1,10 +1,10 @@
 @using ApexCharts
 @using HealthMonitor.Client.Model
 
-<div style="height: 100%;">
+<div style="height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
     <ApexChart TItem="TrendDataPoint"
-               Title="Health Predictions with Confidence Intervals"
-               Height="@Height"
+               Title=""
+               Height="@(Height - 16)"
                Options="@_chartOptions">
 
         @foreach (var serviceGroup in Data.GroupBy(d => d.Label))
@@ -22,23 +22,38 @@
 @code {
     [Parameter] public List<ChartData> Data { get; set; } = new();
     [Parameter] public int Height { get; set; } = 350;
-    
+
     private readonly ApexChartOptions<TrendDataPoint> _chartOptions = new()
     {
         Chart = new Chart
         {
             Toolbar = new Toolbar { Show = true },
-            Zoom = new Zoom { Enabled = true }
+            Zoom = new Zoom { Enabled = true },
+            Background = "transparent",
+            ForeColor = "#ffffff"
+        },
+        Colors = new List<string> { "#00D9FF", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7" },
+        Fill = new Fill
+        {
+            Type = new List<FillType> { FillType.Gradient },
+            Gradient = new FillGradient
+            {
+                Shade = GradientShade.Dark,
+                Type = GradientType.Horizontal,
+                ShadeIntensity = 0.5,
+                OpacityFrom = 0.8,
+                OpacityTo = 0.3
+            }
         },
         Stroke = new Stroke
         {
             Curve = Curve.Smooth,
-            Width = 3,
-            DashArray = new List<int> { 0, 5 }
+            Width = 4
         },
-        Fill = new Fill
+        Legend = new Legend
         {
-            Type = new List<FillType> { FillType.Solid, FillType.Pattern }
+            Position = LegendPosition.Top,
+            FontSize = "14px"
         },
         Xaxis = new XAxis
         {
@@ -49,13 +64,19 @@
         [
             new YAxis
             {
-                Title = new AxisTitle { Text = "Predicted Health Score %" },
-                Min = 0,
+                Title = new AxisTitle { Text = "Health Score (%)" },
                 Max = 100,
-                DecimalsInFloat = 2
+                Min = 0,
+                TickAmount = 10,
+                ForceNiceScale = true,
+                DecimalsInFloat = 1
             }
         ],
-        Legend = new Legend { Position = LegendPosition.Top },
+        Tooltip = new Tooltip
+        {
+            Enabled = true,
+            Shared = true
+        },
         Annotations = new Annotations
         {
             Yaxis =
@@ -63,11 +84,58 @@
                 new AnnotationsYAxis
                 {
                     Y = 95,
+                    Y2 = 100,
                     BorderColor = "#00E396",
+                    FillColor = "#00E396",
+                    Opacity = 0.1,
                     Label = new Label
                     {
-                        Text = "SLA Threshold",
-                        Style = new Style { Color = "#fff", Background = "#00E396" }
+                        Text = "✓ Excellent Health Zone",
+                        Style = new Style
+                        {
+                            Color = "#fff",
+                            Background = "#00E396",
+                            FontSize = "12px"
+                        },
+                        Position = LabelPosition.Right
+                    }
+                },
+                new AnnotationsYAxis
+                {
+                    Y = 70,
+                    Y2 = 95,
+                    BorderColor = "#FEB019",
+                    FillColor = "#FEB019",
+                    Opacity = 0.05,
+                    Label = new Label
+                    {
+                        Text = "⚠ Warning Zone",
+                        Style = new Style
+                        {
+                            Color = "#fff",
+                            Background = "#FEB019",
+                            FontSize = "12px"
+                        },
+                        Position = LabelPosition.Right
+                    }
+                },
+                new AnnotationsYAxis
+                {
+                    Y = 0,
+                    Y2 = 70,
+                    BorderColor = "#FF4560",
+                    FillColor = "#FF4560",
+                    Opacity = 0.05,
+                    Label = new Label
+                    {
+                        Text = "🚨 Critical Zone",
+                        Style = new Style
+                        {
+                            Color = "#fff",
+                            Background = "#FF4560",
+                            FontSize = "12px"
+                        },
+                        Position = LabelPosition.Right
                     }
                 }
             ]

@@ -11,7 +11,6 @@
         <PackageReference Include="Microsoft.Orleans.Clustering.Redis" Version="9.2.1" />
         <PackageReference Include="Microsoft.Orleans.Persistence.Redis" Version="9.2.1" />
         <PackageReference Include="Microsoft.Orleans.Reminders.Redis" Version="9.2.1" />
-        <PackageReference Include="OrleansDashboard" Version="8.2.0" />
     </ItemGroup>
 
     <ItemGroup>

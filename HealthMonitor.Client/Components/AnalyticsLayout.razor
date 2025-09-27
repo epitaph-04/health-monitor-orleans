@@ -1,0 +1,164 @@
+@using HealthMonitor.Client.Model
+@using HealthMonitor.Client.Service
+@inject DashboardService DashboardService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <!-- Analytics Header -->
+    <MudGrid>
+        <MudItem xs="12">
+            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                <MudStack Row AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@HeaderIcon" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h4" Color="Color.Primary">@Title</MudText>
+                    @if (!string.IsNullOrEmpty(Subtitle))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                            @Subtitle
+                        </MudChip>
+                    }
+                </MudStack>
+
+                <MudStack Row>
+                    <MudButton Variant="Variant.Filled"
+                              Color="Color.Primary"
+                              StartIcon="Icons.Material.Filled.Refresh"
+                              OnClick="@OnRefresh"
+                              Disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            <MudText>Loading...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Refresh</MudText>
+                        }
+                    </MudButton>
+
+                    @if (ShowExport)
+                    {
+                        <MudMenu Icon="Icons.Material.Filled.FileDownload"
+                                Color="Color.Primary"
+                                Variant="Variant.Outlined">
+                            <MudMenuItem OnClick="@(() => OnExport.InvokeAsync("pdf"))">
+                                <MudIcon Icon="Icons.Material.Filled.PictureAsPdf" Class="mr-2" />
+                                Export as PDF
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnExport.InvokeAsync("excel"))">
+                                <MudIcon Icon="Icons.Material.Filled.TableChart" Class="mr-2" />
+                                Export to Excel
+                            </MudMenuItem>
+                            <MudMenuItem OnClick="@(() => OnExport.InvokeAsync("csv"))">
+                                <MudIcon Icon="Icons.Material.Filled.Description" Class="mr-2" />
+                                Export as CSV
+                            </MudMenuItem>
+                        </MudMenu>
+                    }
+                </MudStack>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Main Content Grid -->
+    <MudGrid>
+        @if (ShowFilters)
+        {
+            <!-- Left Sidebar - Filters -->
+            <MudItem xs="12" lg="3">
+                <ServiceFilterSidebar ServiceFilters="@ServiceFilters"
+                                     SelectedHours="@SelectedHours"
+                                     OnTimeRangeChanged="@OnTimeRangeChanged"
+                                     OnServiceSelectionChanged="@OnServiceSelectionChanged" />
+            </MudItem>
+        }
+
+        <!-- Main Content Area -->
+        <MudItem xs="12" lg="@(ShowFilters ? 9 : 12)">
+            @if (IsLoading)
+            {
+                <MudCard Elevation="4" Style="height: 400px;">
+                    <MudCardContent>
+                        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                            <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+                            <MudText Typo="Typo.h6">Loading analytics data...</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                This may take a moment for large datasets
+                            </MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            }
+            else
+            {
+                @ChildContent
+            }
+        </MudItem>
+    </MudGrid>
+
+    @if (ShowMetricsSummary && SelectedServices?.Any() == true)
+    {
+        <!-- Metrics Summary Footer -->
+        <MudCard Elevation="4" Class="mt-4">
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Selected Services</MudText>
+                            <MudText Typo="Typo.h5">@SelectedServices.Count()</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Time Range</MudText>
+                            <MudText Typo="Typo.h5">@GetTimeRangeText()</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Last Updated</MudText>
+                            <MudText Typo="Typo.h5">@DateTime.Now.ToString("HH:mm")</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Data Points</MudText>
+                            <MudText Typo="Typo.h5">@($"{DataPointsCount:N0}")</MudText>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Analytics";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string HeaderIcon { get; set; } = Icons.Material.Filled.Analytics;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool ShowFilters { get; set; } = true;
+    [Parameter] public bool ShowExport { get; set; } = false;
+    [Parameter] public bool ShowMetricsSummary { get; set; } = false;
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public int DataPointsCount { get; set; } = 0;
+
+    [Parameter] public List<ServiceFilter>? ServiceFilters { get; set; }
+    [Parameter] public int SelectedHours { get; set; } = 24;
+    [Parameter] public EventCallback<int> OnTimeRangeChanged { get; set; }
+    [Parameter] public EventCallback<List<ServiceFilter>> OnServiceSelectionChanged { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<string> OnExport { get; set; }
+
+    private List<string> SelectedServices =>
+        ServiceFilters?.Where(s => s.IsSelected).Select(s => s.ServiceId).ToList() ?? new();
+
+    private string GetTimeRangeText() => SelectedHours switch
+    {
+        1 => "1 Hour",
+        24 => "24 Hours",
+        168 => "7 Days",
+        720 => "30 Days",
+        _ => $"{SelectedHours} Hours"
+    };
+}

@@ -1,0 +1,339 @@
+@page "/analytics"
+@using HealthMonitor.Client.Components
+@using HealthMonitor.Client.Model
+@using HealthMonitor.Client.Service
+@inject DashboardService DashboardService
+@inject NavigationManager Navigation
+
+<PageTitle>Analytics - Health Monitor</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <!-- Breadcrumb Navigation -->
+    <MudBreadcrumbs Items="@_breadcrumbItems" Class="mb-4" />
+
+    <!-- Header Section -->
+    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-6">
+        <MudStack Row AlignItems="AlignItems.Center">
+            <MudIcon Icon="Icons.Material.Filled.Analytics" Size="Size.Large" Color="Color.Primary" />
+            <MudStack>
+                <MudText Typo="Typo.h3" Color="Color.Primary">Analytics Dashboard</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">
+                    Comprehensive insights into your system performance and health trends
+                </MudText>
+            </MudStack>
+        </MudStack>
+
+        <MudStack Row>
+            <MudButton Variant="Variant.Outlined"
+                      Color="Color.Secondary"
+                      StartIcon="Icons.Material.Filled.Dashboard"
+                      Href="/"
+                      Size="Size.Medium">
+                Dashboard
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                      Color="Color.Primary"
+                      StartIcon="Icons.Material.Filled.Refresh"
+                      OnClick="@LoadAnalyticsOverview"
+                      Size="Size.Medium">
+                Refresh Data
+            </MudButton>
+        </MudStack>
+    </MudStack>
+
+    <!-- Quick Stats Cards -->
+    <MudGrid Class="mb-6">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="8" Style="height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="height: 100%;">
+                        <MudStack Style="color: white;">
+                            <MudText Typo="Typo.h4">@_totalServices</MudText>
+                            <MudText Typo="Typo.body2">Total Services</MudText>
+                        </MudStack>
+                        <MudIcon Icon="Icons.Material.Filled.Architecture" Size="Size.Large" Style="color: white; opacity: 0.7;" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="8" Style="height: 120px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="height: 100%;">
+                        <MudStack Style="color: white;">
+                            <MudText Typo="Typo.h4">@_dataPointsToday</MudText>
+                            <MudText Typo="Typo.body2">Data Points Today</MudText>
+                        </MudStack>
+                        <MudIcon Icon="Icons.Material.Filled.Timeline" Size="Size.Large" Style="color: white; opacity: 0.7;" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="8" Style="height: 120px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="height: 100%;">
+                        <MudStack Style="color: white;">
+                            <MudText Typo="Typo.h4">@($"{_avgResponseTime:F0}ms")</MudText>
+                            <MudText Typo="Typo.body2">Avg Response Time</MudText>
+                        </MudStack>
+                        <MudIcon Icon="Icons.Material.Filled.Speed" Size="Size.Large" Style="color: white; opacity: 0.7;" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="8" Style="height: 120px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="height: 100%;">
+                        <MudStack Style="color: white;">
+                            <MudText Typo="Typo.h4">@($"{_systemUptime:F1}%")</MudText>
+                            <MudText Typo="Typo.body2">System Uptime</MudText>
+                        </MudStack>
+                        <MudIcon Icon="Icons.Material.Filled.HealthAndSafety" Size="Size.Large" Style="color: white; opacity: 0.7;" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Analytics Categories -->
+    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudStack>
+            <MudText Typo="Typo.h5" Color="Color.Primary">Explore Analytics</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Choose an analytics area to dive deep into your system's performance
+            </MudText>
+        </MudStack>
+        <MudStack Row>
+            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                <MudIcon Icon="Icons.Material.Filled.Circle" Size="Size.Small" Class="mr-1" />
+                Live Data
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                <MudIcon Icon="Icons.Material.Filled.Devices" Size="Size.Small" Class="mr-1" />
+                @_totalServices Services
+            </MudChip>
+        </MudStack>
+    </MudStack>
+
+    <MudGrid>
+        <!-- Trends Analytics -->
+        <MudItem xs="12" sm="6" md="6">
+            <MudCard Elevation="4" Style="height: 300px; transition: transform 0.3s, box-shadow 0.3s;"
+                    Class="cursor-pointer hover-card">
+                <MudCardContent OnClick="@(() => Navigation.NavigateTo("/analytics/trends"))">
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudIcon Icon="Icons.Material.Filled.TrendingUp"
+                                Size="Size.Large"
+                                Color="Color.Primary"
+                                Style="font-size: 4rem;" />
+                        <MudText Typo="Typo.h5" Align="Align.Center">Trends Analysis</MudText>
+                        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                            Historical performance trends, health patterns, and response time analysis over time
+                        </MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                  Color="Color.Primary"
+                                  EndIcon="Icons.Material.Filled.ArrowForward"
+                                  Class="mt-3">
+                            Explore Trends
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Insights Analytics -->
+        <MudItem xs="12" sm="6" md="6">
+            <MudCard Elevation="4" Style="height: 300px; transition: transform 0.3s, box-shadow 0.3s;"
+                    Class="cursor-pointer hover-card">
+                <MudCardContent OnClick="@(() => Navigation.NavigateTo("/analytics/insights"))">
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudIcon Icon="Icons.Material.Filled.Psychology"
+                                Size="Size.Large"
+                                Color="Color.Secondary"
+                                Style="font-size: 4rem;" />
+                        <MudText Typo="Typo.h5" Align="Align.Center">Advanced Insights</MudText>
+                        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                            Anomaly detection, service comparisons, and detailed analytical insights with predictions
+                        </MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                  Color="Color.Secondary"
+                                  EndIcon="Icons.Material.Filled.ArrowForward"
+                                  Class="mt-3">
+                            View Insights
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- SLA Analytics -->
+        <MudItem xs="12" sm="6" md="6">
+            <MudCard Elevation="4" Style="height: 300px; transition: transform 0.3s, box-shadow 0.3s;"
+                    Class="cursor-pointer hover-card">
+                <MudCardContent OnClick="@(() => Navigation.NavigateTo("/analytics/sla"))">
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudIcon Icon="Icons.Material.Filled.Assignment"
+                                Size="Size.Large"
+                                Color="Color.Tertiary"
+                                Style="font-size: 4rem;" />
+                        <MudText Typo="Typo.h5" Align="Align.Center">SLA Compliance</MudText>
+                        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                            Service level agreement tracking, compliance metrics, and uptime guarantees monitoring
+                        </MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                  Color="Color.Tertiary"
+                                  EndIcon="Icons.Material.Filled.ArrowForward"
+                                  Class="mt-3">
+                            Check SLA Status
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Service Deep-Dive -->
+        <MudItem xs="12" sm="6" md="6">
+            <MudCard Elevation="4" Style="height: 300px; transition: transform 0.3s, box-shadow 0.3s;"
+                    Class="cursor-pointer hover-card">
+                <MudCardContent OnClick="@(() => Navigation.NavigateTo("/analytics/services"))">
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudIcon Icon="Icons.Material.Filled.Hub"
+                                Size="Size.Large"
+                                Color="Color.Info"
+                                Style="font-size: 4rem;" />
+                        <MudText Typo="Typo.h5" Align="Align.Center">Service Deep-Dive</MudText>
+                        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                            Individual service analysis, performance metrics, and detailed health monitoring per service
+                        </MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                  Color="Color.Info"
+                                  EndIcon="Icons.Material.Filled.ArrowForward"
+                                  Class="mt-3">
+                            Analyze Services
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Recent Activity Summary -->
+    <MudCard Elevation="4" Class="mt-6">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Recent Analytics Activity</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudStack AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Most Active Service</MudText>
+                        <MudText Typo="Typo.h6">@_mostActiveService</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudStack AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Latest Alert</MudText>
+                        <MudText Typo="Typo.h6">@_latestAlert</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudStack AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Data Refresh</MudText>
+                        <MudText Typo="Typo.h6">@DateTime.Now.ToString("HH:mm:ss")</MudText>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+<style>
+    .hover-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+</style>
+
+@code {
+    private int _totalServices = 0;
+    private int _dataPointsToday = 0;
+    private double _avgResponseTime = 0;
+    private double _systemUptime = 0;
+    private string _mostActiveService = "Loading...";
+    private string _latestAlert = "No recent alerts";
+
+    private List<BreadcrumbItem> _breadcrumbItems = new()
+    {
+        new BreadcrumbItem("Dashboard", href: "/", icon: Icons.Material.Filled.Dashboard),
+        new BreadcrumbItem("Analytics", href: null, icon: Icons.Material.Filled.Analytics, disabled: true)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAnalyticsOverview();
+    }
+
+    private async Task LoadAnalyticsOverview()
+    {
+        try
+        {
+            // Load basic analytics data
+            var systemOverview = await DashboardService.GetSystemOverviewAsync();
+            var services = await DashboardService.GetAllServices();
+
+            _totalServices = services?.Count() ?? 0;
+            _systemUptime = systemOverview?.OverallSystemHealth ?? 0;
+
+            // Calculate real metrics from services
+            var totalDataPoints = 0;
+            var totalResponseTime = 0.0;
+            var responseTimeCount = 0;
+
+            foreach (var service in services ?? Enumerable.Empty<HealthMonitor.Model.Service>())
+            {
+                try
+                {
+                    var trendData = await DashboardService.GetServiceTrendAsync(service.Id, 24);
+                    totalDataPoints += trendData.TotalDataPoints;
+
+                    if (trendData.AverageResponseTime > TimeSpan.Zero)
+                    {
+                        totalResponseTime += trendData.AverageResponseTime.TotalMilliseconds;
+                        responseTimeCount++;
+                    }
+                }
+                catch
+                {
+                    // Skip service if error occurs
+                }
+            }
+
+            _dataPointsToday = totalDataPoints;
+            _avgResponseTime = responseTimeCount > 0 ? (int)(totalResponseTime / responseTimeCount) : 0;
+            _mostActiveService = services?.FirstOrDefault()?.Id ?? "N/A";
+
+            if (systemOverview?.Alerts?.Any() == true)
+            {
+                var latestAlert = systemOverview.Alerts.OrderByDescending(a => a.DetectedAt).FirstOrDefault();
+                _latestAlert = $"{latestAlert?.ServiceId} - {latestAlert?.DetectedAt:HH:mm}";
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Handle gracefully - show default values
+        }
+    }
+}
